@@ -5,8 +5,8 @@ begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
     gem.name = "net-snmp"
-    gem.summary = %Q{TODO: one-line summary of your gem}
-    gem.description = %Q{TODO: longer description of your gem}
+    gem.summary = %Q{SNMP library for ruby}
+    gem.description = %Q{wrapper around net-snmp lib for ruby using ffi bindings}
     gem.email = "ronmcclain75@gmail.com"
     gem.homepage = "http://github.com/mixtli/net-snmp"
     gem.authors = ["mixtli"]
@@ -18,17 +18,17 @@ rescue LoadError
   puts "Jeweler (or a dependency) not available. Install it with: gem install jeweler"
 end
 
-require 'spec/rake/spectask'
-Spec::Rake::SpecTask.new(:spec) do |spec|
-  spec.libs << 'lib' << 'spec'
-  spec.spec_files = FileList['spec/**/*_spec.rb']
-end
+#require 'spec/rake/spectask'
+#Spec::Rake::SpecTask.new(:spec) do |spec|
+#  spec.libs << 'lib' << 'spec'
+#  spec.spec_files = FileList['spec/**/*_spec.rb']
+#end
 
-Spec::Rake::SpecTask.new(:rcov) do |spec|
-  spec.libs << 'lib' << 'spec'
-  spec.pattern = 'spec/**/*_spec.rb'
-  spec.rcov = true
-end
+#Spec::Rake::SpecTask.new(:rcov) do |spec|
+#  spec.libs << 'lib' << 'spec'
+#  spec.pattern = 'spec/**/*_spec.rb'
+#  spec.rcov = true
+#end
 
 task :spec => :check_dependencies
 

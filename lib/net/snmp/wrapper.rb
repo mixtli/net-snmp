@@ -143,11 +143,74 @@ module Wrapper
            :securityInfo, :pointer,
            :myvoid, :pointer
     )
-  
-
   end
+  class Tree < NiceFFI::Struct
+    layout(
+      :child_list, :pointer,
+      :next_peer, :pointer,
+      :next, :pointer,
+      :parent, :pointer,
+      :label, :string,
+      :subid, :u_long,
+      :modid, :int,
+      :number_modules, :int,
+      :module_list, :pointer,
+      :tc_index, :int,
+      :type, :int,
+      :access, :int,
+      :status, :int,
+      :enums, :pointer,
+      :ranges, :pointer,
+      :indexes, :pointer,
+      :augments, :pointer,
+      :varbinds, :pointer,
+      :hint, :pointer,
+      :units, :pointer,
+      :printomat, callback([:pointer, :pointer, :pointer, :int, :pointer, :pointer, :pointer, :pointer], :int),
+      :printer, callback([:pointer, :pointer, :pointer, :pointer, :pointer], :void),
+      :description, :pointer,
+      :reference, :pointer,
+      :reported, :int,
+      :defaultValue, :pointer
+    )
+      # struct tree    *child_list;     /* list of children of this node */
+      # struct tree    *next_peer;      /* Next node in list of peers */
+      # struct tree    *next;   /* Next node in hashed list of names */
+      # struct tree    *parent;
+      # char           *label;  /* This node's textual name */
+      # u_long          subid;  /* This node's integer subidentifier */
+      # int             modid;  /* The module containing this node */
+      # int             number_modules;
+      # int            *module_list;    /* To handle multiple modules */
+      # int             tc_index;       /* index into tclist (-1 if NA) */
+      # int             type;   /* This node's object type */
+      # int             access; /* This nodes access */
+      # int             status; /* This nodes status */
+      # struct enum_list *enums;        /* (optional) list of enumerated integers */
+      # struct range_list *ranges;
+      # struct index_list *indexes;
+      # char           *augments;
+      # struct varbind_list *varbinds;
+      # char           *hint;
+      # char           *units;
+      # int             (*printomat) (u_char **, size_t *, size_t *, int,
+      #                               const netsnmp_variable_list *,
+      #                               const struct enum_list *, const char *,
+      #                               const char *);
+      # void            (*printer) (char *, const netsnmp_variable_list *, const struct enum_list *, const char *, const char *);   /* Value printing function */
+      # char           *description;    /* description (a quoted string) */
+      # char           *reference;    /* references (a quoted string) */
+      # int             reported;       /* 1=report started in print_subtree... */
+      # char           *defaultValue;
+  end
+  attach_function :init_mib, [], :void
+  attach_function :read_all_mibs, [], :void
+  attach_function :get_tree_head, [], Tree.typed_pointer
+  attach_function :get_tree, [:pointer, :int, :pointer], Tree.typed_pointer
+
+
 #  puts "snmp_session size = #{SnmpSession.size}"
-  attach_function :snmp_open, [ :pointer ], Net::SNMP::Wrapper::SnmpSession.typed_pointer
+  attach_function :snmp_open, [ :pointer ], SnmpSession.typed_pointer
   attach_function :snmp_errstring, [:int], :string
   attach_function :snmp_close, [ :pointer ], :int
   attach_function :snmp_close_sessions, [  ], :int

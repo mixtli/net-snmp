@@ -27,6 +27,20 @@ module Net
       ASN_EXTENSION_ID    = 0x1F
       ASN_BIT8            = 0x80
 
+
+      ASN_IPADDRESS   = (ASN_APPLICATION | 0)
+      ASN_COUNTER     = (ASN_APPLICATION | 1)
+      ASN_GAUGE       = (ASN_APPLICATION | 2)
+      ASN_UNSIGNED    = (ASN_APPLICATION | 2)   # RFC 1902 - same as GAUGE
+      ASN_TIMETICKS   = (ASN_APPLICATION | 3)
+      ASN_OPAQUE      = (ASN_APPLICATION | 4)
+
+      #define ASN_NSAP        (ASN_APPLICATION | 5)   /* historic - don't use */
+      #define ASN_COUNTER64   (ASN_APPLICATION | 6)
+      #define ASN_UINTEGER    (ASN_APPLICATION | 7)   /* historic - don't use */
+
+
+
       SNMP_MSG_GET        = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x0)
       SNMP_MSG_GETNEXT    = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x1) 
       SNMP_MSG_RESPONSE   = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x2) 

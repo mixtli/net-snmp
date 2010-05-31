@@ -34,9 +34,12 @@ module Net
         
         
         sess.callback = lambda do |operation, session, reqid, pdu_ptr, magic|
+          puts "got snmp_session callback"
           pdu = Net::SNMP::PDU.new(pdu_ptr)
-          Net::SNMP::REQUESTS[reqid].call(pdu)
-          Net::SNMP::REQUESTS.delete(reqid)
+          if Net::SNMP::REQUESTS[reqid]
+            Net::SNMP::REQUESTS[reqid].call(pdu)
+            Net::SNMP::REQUESTS.delete(reqid)
+          end
           0
         end
         @struct = Wrapper.snmp_open(sess.pointer)
@@ -44,7 +47,10 @@ module Net
 
       def self.open(options)
         session = new(options)
-        yield session
+        if block_given?
+          yield session
+	      end
+	      session
       end
 
       def get(oidlist, options = {}, &block)
@@ -56,6 +62,7 @@ module Net
         oidlist.each do |oid|
           pdu.add_varbind(:oid => oid)
         end
+        
         send_pdu(pdu, &block)
 
       end
@@ -81,7 +88,12 @@ module Net
       def send_pdu(pdu, &block)
         if block
           REQUESTS[pdu.reqid] = block
+          puts "sending pdu"
+          puts pdu.inspect
+          puts pdu.struct.inspect
+          puts pdu.varbinds.first.struct.inspect
           if (status = Net::SNMP::Wrapper.snmp_send(@struct.pointer, pdu.pointer)) == 0
+            puts "BIG FAT ERROR"
             error("snmp_get async failed")
           end
           nil          
