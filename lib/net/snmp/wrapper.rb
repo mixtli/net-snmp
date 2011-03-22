@@ -264,7 +264,7 @@ module Wrapper
   attach_function :snmp_sess_init, [ :pointer ], :void
   attach_function :snmp_sess_open, [ :pointer ], :pointer
   attach_function :snmp_sess_pointer, [ :pointer ], :pointer
-  attach_function :snmp_sess_session, [ :pointer ], :pointer
+  attach_function :snmp_sess_session, [ :pointer ], SnmpSession.typed_pointer
   attach_function :snmp_sess_transport, [ :pointer ], :pointer
   attach_function :snmp_sess_transport_set, [ :pointer, :pointer ], :void
   attach_function :snmp_sess_add_ex, [ :pointer, :pointer, callback([ :pointer, :pointer, :pointer, :int ], :int), callback([ :pointer, :pointer, :pointer, :uint ], :int), callback([ :pointer, :pointer, :int ], :int), callback([ :pointer, :pointer, :pointer, :pointer ], :int), callback([ :pointer, :pointer, :pointer, :pointer, :pointer ], :int), callback([ :pointer, :uint ], :int), callback([ :pointer, :pointer, :uint ], :pointer) ], :pointer

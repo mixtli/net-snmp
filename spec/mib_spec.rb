@@ -36,5 +36,10 @@ describe Net::SNMP::MIB::Node do
     node.label.should eq("sysDescr")
   end
   
+  it "should do stuff" do
+    node = Net::SNMP::MIB::Node.get_node("ipAdEntIfIndex")
+    puts node.inspect
+    puts node.struct.inspect
+  end
   
 end

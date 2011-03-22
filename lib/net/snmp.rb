@@ -2,6 +2,8 @@ require 'net/snmp/constants'
 module Net
   module SNMP
     include Net::SNMP::Constants
+
+    # Putting this here so there can be one global dispatcher for all sessions.  need to think this through
     REQUESTS = {}
 
     def self.init(tag="snmp")
@@ -9,26 +11,9 @@ module Net
     end
      
     def self.dispatcher
-      puts "in dispatcher"
-      #while REQUESTS.size > 0
-        puts REQUESTS.inspect
-        fdset = Net::SNMP::Wrapper.get_fd_set
-        fds = FFI::MemoryPointer.new(:int)
-        tval = Net::SNMP::Wrapper::TimeVal.new
-        block = FFI::MemoryPointer.new(:int)
-        block.write_int(1)
-        Net::SNMP::Wrapper.snmp_select_info(fds, fdset, tval.pointer, block )
-        puts "selecting"
-        if fds.read_int > 0
-          puts "snmp_select returned #{fds.read_int}"
-          zero = Wrapper::TimeVal.new(:tv_sec => 0, :tv_usec => 0)
-          puts "block is #{block.read_int}"
-          num_ready = Net::SNMP::Wrapper.select(fds.read_int, fdset, nil, nil, block.read_int == 1 ? nil : zero.pointer)
-          puts "got #{num_ready} descriptors"
-          Net::SNMP::Wrapper.snmp_read(fdset)
-        end
-      #end
-      puts "exited dispatcher"
+      Net::SNMP::Session.all_sessions.each do |s|
+        s.dispatcher
+      end
     end
 
     def self._get_oid(name)

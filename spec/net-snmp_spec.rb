@@ -20,7 +20,7 @@ describe "NetSnmp" do
   
   it "should get multiple requests asynchronously" do
     did_callback = false
-    Net::SNMP::Session.open(:peername => '127.0.0.1') do |s|
+    session = Net::SNMP::Session.open(:peername => '127.0.0.1') do |s|
       s.get(["sysDescr.0", "sysName.0", "ifOutOctets.1"]) do |result|
         did_callback = true
         result.varbinds[0].value.should match(/Darwin/)
@@ -30,7 +30,8 @@ describe "NetSnmp" do
       end
     end
     sleep 1
-    Net::SNMP.dispatcher()
+    #session.dispatcher()
+    Net::SNMP.dispatcher
     #2.times { sleep 1; Net::SNMP.dispatcher() }
     did_callback.should be(true)
   end

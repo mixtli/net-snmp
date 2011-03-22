@@ -1,7 +1,7 @@
 module Net
   module SNMP
     class Error < RuntimeError
-      attr :status, :errno, :snmp_err, :snmp_msg
+      #attr :status, :errno, :snmp_err, :snmp_msg
       
       def initialize(opts = {})
         @status = opts[:status]
