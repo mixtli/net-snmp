@@ -6,11 +6,11 @@ Gem::Specification.new do |s|
   s.name        = "net-snmp"
   s.version     = Net::Snmp::VERSION
   s.platform    = Gem::Platform::RUBY
-  s.authors     = ["TODO: Write your name"]
-  s.email       = ["TODO: Write your email address"]
+  s.authors     = ["Ron McClain"]
+  s.email       = ["mixtli@github.com"]
   s.homepage    = ""
-  s.summary     = %q{TODO: Write a gem summary}
-  s.description = %q{TODO: Write a gem description}
+  s.summary     = %q{Object oriented wrapper around C net-snmp libraries}
+  s.description = %q{Uses ffi to create an object oriented wrapper around C net-snmp libraries}
 
   s.rubyforge_project = "net-snmp"
 
@@ -19,6 +19,6 @@ Gem::Specification.new do |s|
   s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]
   s.add_development_dependency "rspec"
-  s.add_dependency "eventmachine" #, '1.0.0.beta.3'
+  s.add_development_dependency "eventmachine"
   s.add_dependency "nice-ffi"
 end

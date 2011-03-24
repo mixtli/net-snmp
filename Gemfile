@@ -4,6 +4,5 @@ source "http://rubygems.org"
 gemspec
 
 #group :development, :test do
- gem 'eventmachine', '1.0.0.beta.3'
-#  gem 'rspec'
+# gem 'eventmachine', '1.0.0.beta.3'
 #end
