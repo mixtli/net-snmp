@@ -3,7 +3,7 @@ module Net
     class PDU
       extend Forwardable
       attr_accessor :struct, :varbinds, :callback
-      def_delegators :struct, :reqid, :pointer, :errstat, :errindex
+      def_delegators :struct, :reqid, :pointer, :errstat, :errindex, :non_repeaters=
 
       def initialize(arg)
         @varbinds = []
@@ -25,8 +25,23 @@ module Net
         end
       end
 
+       # For getbulk requests, repeaters and maxreps are stored in errstat and errindex
+        def non_repeaters=(nr)
+          @struct.errstat = nr
+        end
+        def non_repeaters
+          @struct.errstat
+        end
+        def max_repetitions=(mr)
+          @struct.errindex = mr
+        end
+        def max_repetitions
+          @struct.errindex
+        end
+
 
       def add_varbind(options)
+
         options[:type] ||= case options[:value]
         when String
           Constants::ASN_OCTET_STR
@@ -43,16 +58,13 @@ module Net
           0
         end
 
-        oid_ptr = FFI::MemoryPointer.new(:ulong, Constants::MAX_OID_LEN)
-        oid_len_ptr = FFI::MemoryPointer.new(:size_t)
-        oid_len_ptr.write_int(Constants::MAX_OID_LEN)
 
-        if !Wrapper.snmp_parse_oid(options[:oid], oid_ptr, oid_len_ptr)
-          Wrapper.snmp_perror(options[:oid])
-        end
-        #var_ptr = Wrapper.snmp_add_null_var(@struct.pointer, oid_ptr, oid_len_ptr.read_int)
-        var_ptr = Wrapper.snmp_pdu_add_variable(@struct.pointer, oid_ptr, oid_len_ptr.read_int, options[:type], options[:value], value_len)
-        varbinds << Varbind.new(var_ptr)
+        oid = Net::SNMP::OID.new(options[:oid])
+
+        var_ptr = Wrapper.snmp_pdu_add_variable(@struct.pointer, oid.pointer, oid.length_pointer.read_int, options[:type], options[:value], value_len)
+        varbind = Varbind.new(var_ptr)
+        #Wrapper.print_varbind(varbind.struct)
+        varbinds << varbind
       end
       
       def error?

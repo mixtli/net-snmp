@@ -15,15 +15,19 @@ module Net
         @struct.type
       end
       
-      def name
+      def oid
         @struct.name.read_array_of_long(@struct.name_length).join(".")
+      end
+      
+      def name
+        oid
       end
 
       def value
         case object_type
-        when Net::SNMP::ASN_OCTET_STR
+        when Constants::ASN_OCTET_STR
           struct.val[:string].read_string(struct.val_len)
-        when Net::SNMP::ASN_INTEGER, Net::SNMP::ASN_COUNTER
+        when Constants::ASN_INTEGER, Net::SNMP::ASN_COUNTER
           struct.val[:integer].read_int
         end
       end

@@ -16,7 +16,10 @@ module Wrapper
   class TimeVal < NiceFFI::Struct
     layout(:tv_sec, :long, :tv_usec, :long)
   end
-  
+  def self.print_timeval(tv)
+    puts "tv_sec = #{tv.tv_sec}, tv_usec = #{tv.tv_usec} "
+  end
+
   
   class NetsnmpVardata < FFI::Union
     layout(
@@ -28,6 +31,16 @@ module Wrapper
            :float, :pointer,
            :double, :pointer
     )
+  end
+
+  def self.print_varbind(v)
+    puts "---------------------VARBIND------------------------"
+    puts %{
+      name_length #{v.name_length}
+      name #{v.name.read_array_of_long(v.name_length).join(".")}
+      type = #{v.type}
+
+    }
   end
  # puts "Vardata size = #{NetsnmpVardata.size}"
   class VariableList < NiceFFI::Struct
@@ -48,6 +61,23 @@ module Wrapper
   
   #puts "VariableList size = #{VariableList.size}"
 
+  def self.print_pdu(p)
+    puts "--------------PDU---------------"
+    puts %{
+      version = #{p.version}
+      command = #{p.command}
+      errstat = #{p.errstat}
+      errindex = #{p.errindex}
+    }
+    v = p.variables.pointer
+    puts "-----VARIABLES------"
+    while !v.null? do
+      var = VariableList.new v
+      print_varbind(var)
+      v = var.next_variable
+    end
+    
+  end
   class SnmpPdu < NiceFFI::Struct
     layout(
            :version, :long,
@@ -92,6 +122,17 @@ module Wrapper
  # puts "snmppdu size = #{SnmpPdu.size}"
   callback(:snmp_callback, [ :int, :pointer, :int, :pointer, :pointer ], :int)
   callback(:netsnmp_callback, [ :int, :pointer, :int, :pointer, :pointer ], :int)
+  def self.print_session(s)
+    puts "-------------------SESSION---------------------"
+    puts %{
+      peername = #{s.peername.read_string}
+      community = #{s.community.read_string(s.community_len)}
+      s_errno = #{s.s_errno}
+      s_snmp_errno = #{s.s_snmp_errno}
+      securityAuthKey = #{s.securityAuthKey.to_ptr.read_string}
+
+    }
+  end
   class SnmpSession < NiceFFI::Struct
     layout(
            :version, :long,
@@ -314,7 +355,9 @@ module Wrapper
 
   attach_function :snmp_pdu_create, [:int], SnmpPdu.typed_pointer
   attach_function :get_node, [:pointer, :pointer, :pointer], :int
+  attach_function :read_objid, [:string, :pointer, :pointer], :int
   attach_function :snmp_add_null_var, [:pointer, :pointer, :size_t], :pointer
+  attach_function :snmp_sess_synch_response, [:pointer, :pointer, :pointer], :int
   attach_function :snmp_synch_response, [:pointer, :pointer, :pointer], :int
   attach_function :snmp_parse_oid, [:string, :pointer, :pointer], :pointer
   attach_function :snmp_api_errstring, [ :int ], :string
@@ -324,9 +367,16 @@ module Wrapper
   attach_function :snmp_select_info, [:pointer, :pointer, :pointer, :pointer], :int
   attach_function :select, [:int, :pointer, :pointer, :pointer, :pointer], :int
   attach_function :snmp_read, [:pointer], :void
+  attach_function :generate_Ku, [:pointer, :int, :string, :int, :pointer, :pointer], :int
+  #attach_function :send_easy_trap, [:int, :int], :void
+  #attach_function :send_trap_vars, [:int, :int, :pointer], :void
+  #attach_function :send_v2trap, [:pointer], :void
+
   def self.get_fd_set
     FFI::MemoryPointer.new(:pointer, 128)
   end
+  
+
 end
 end
 end

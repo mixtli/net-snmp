@@ -8,11 +8,17 @@ describe "Net::SNMP::Wrapper" do
     sess = Net::SNMP::Wrapper::SnmpSession.new
     Net::SNMP::Wrapper.snmp_sess_init(sess.pointer)
     sess.community = FFI::MemoryPointer.new(:pointer, community.length + 1)
+    #sess.community.autorelease = false
     sess.community.write_string(community)
     sess.community_len = community.length
     sess.peername = FFI::MemoryPointer.new(:pointer, peername.length + 1)
+    #sess.peername.autorelease = false
     sess.peername.write_string(peername)
     sess.version = Net::SNMP::SNMP_VERSION_1
+
+    @handle = Net::SNMP::Wrapper.snmp_sess_open(sess.pointer)
+    Net::SNMP::Wrapper.snmp_sess_session(@handle)
+
     sess
   end
 
@@ -28,24 +34,25 @@ describe "Net::SNMP::Wrapper" do
   end
 
   it "wrapper should snmpget synchronously" do
-
+    #pending
     sess = init_session
     sess = Net::SNMP::Wrapper.snmp_open(sess.pointer)
 
     pdu = make_pdu
 
     response_ptr = FFI::MemoryPointer.new(:pointer)
-     
-    status = Net::SNMP::Wrapper.snmp_synch_response(sess.pointer, pdu.pointer, response_ptr)
+    #response_ptr.autorelease = false
+    status = Net::SNMP::Wrapper.snmp_sess_synch_response(@handle, pdu.pointer, response_ptr)
+    status.should eql(0)
      
     response = Net::SNMP::Wrapper::SnmpPdu.new(response_ptr.read_pointer)
     value = response.variables.val[:string].read_string
-
-    status.should be(0)
-    value.should match(/snmptest/)
+    puts "val_len = #{response.variables.val_len}"
+    value.should eql('test.net-snmp.org')
   end
 
   it "wrapper should snmpget asynchronously" do
+      pending
       sess = init_session
       pdu = make_pdu
       did_callback = 0
@@ -62,13 +69,15 @@ describe "Net::SNMP::Wrapper" do
 
       fdset = Net::SNMP::Wrapper.get_fd_set
       fds = FFI::MemoryPointer.new(:int)
+      #fds.autorelease = false
       tval = Net::SNMP::Wrapper::TimeVal.new
       block = FFI::MemoryPointer.new(:int)
+      #block.autorelease = false
       block.write_int(1)
       Net::SNMP::Wrapper.snmp_select_info(fds, fdset, tval.pointer, block )
       Net::SNMP::Wrapper.select(fds.read_int, fdset, nil, nil, nil)
       Net::SNMP::Wrapper.snmp_read(fdset)
       did_callback.should be(1)
-      result.should match(/snmptest/)
+      result.should eql('test.net-snmp.org')
   end
 end

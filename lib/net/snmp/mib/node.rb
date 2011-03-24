@@ -12,9 +12,6 @@ module Net::SNMP
           struct = Wrapper.get_tree(oid_ptr, oid_len_ptr.read_int, Wrapper.get_tree_head().pointer)
           new(struct.pointer)
         end
-
-
-
       end
       
       def initialize(arg)

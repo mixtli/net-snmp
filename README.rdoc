@@ -1,6 +1,135 @@
 = net-snmp
 
-Description goes here.
+== DESCRIPTION
+
+net-snmp is a Ruby object oriented wrapper around the C netsnmp[http://www.net-snmp.org] libraries.
+It provides classes for sessions, pdus, varbinds, and more.
+
+== FEATURES
+
+* Supports SNMP versions 1, 2c, and 3
+* Supports both synchronous and asynchronous calls
+* Integrates well with eventmachine, or can be used standalone.
+* In Ruby 1.9, uses fibers behind the scenes to emulate synchronous calls asynchronously
+
+
+== USAGE
+
+  You must have the net-snmp libraries installed and available on the system.  Check to make sure
+they are available in your library path.  If necessary, add them to your shell like so:
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/local/lib/net-snmp
+
+
+  You can use the library in two styles:  synchronously or asynchronously.  If you use the synchronous style,
+calls will block until a result is returned or the request times out.  If you use the asynchronous style, you
+must provide a block to the client methods, which will be called when the data is ready.
+
+  In order for your callbacks to fire, you must call Net::SNMP.dispatcher.  You may pass a timeout argument to
+the dispatcher.  If you pass false, the call will block forever until data is ready.  If you pass an integer, it will block for
+<timeout> seconds.  If you pass nil (the default), it will do a poll and return immediately.  In that case, you
+will have to arrange for the dispatcher to run periodically.  This can be done in your main event loop or in a
+seperate thread.
+
+  If you like eventmachine, it's very easy to set up the dispatcher to run periodically in the adaptor.  If you're
+using eventmachine with ruby 1.9, the library uses fibers behind the scenes to turn your synchronous calls into asynchronous
+calls, while allowing you to use a synchronous calling style.  Examples of all these scenarios are below.
+
+== FFI
+  This library uses ruby-ffi to access the net-snmp libraries.  If you want to use the C library directly, the wrapper
+functions are defined in Net::SNMP::Wrapper.  You can call them like so:
+  Net::SNMP::Wrapper.snmp_perror("some_error")
+
+
+
+== EXAMPLES
+
+
+A simple synchronous SNMP-GET
+
+  session = Net::SNMP::Session.open(:peername => "test.net-snmp.org", :community => "demopublic" )
+  result = session.get("sysDescr.0")
+  puts result.varbinds.first.value
+ 
+An asynchronous SNMP-GET
+
+    Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |session|
+      session.get(["sysDescr.0", "sysContact.0"]) do |result|
+        puts result.varbinds[0].value
+      end
+    end
+    Net::SNMP.dispatcher(false)  #Setting timeout to false causes dispatcher to block until data is ready
+
+
+Running the dispatcher in a seperate thread
+
+    dispatcher_thread = Thread.new do
+      while Net::SNMP.dispatcher == 0
+        sleep 1
+      end
+    end
+
+    Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |s|
+      s.get(["sysDescr.0", "sysContact.0"]) do |result|
+        puts result.varbinds[0].value
+      end
+    end
+    dispatcher_thread.join
+
+Running the dispatcher from eventmachine
+    EM.run do
+      tickloop = EM.tick_loop do
+        Net::SNMP.dispatcher
+      end
+
+      Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |session|
+        session.get("sysDescr.0") do |result|
+          puts result.varbinds[0].value
+        end
+      end
+    end
+
+Using synchronous style with eventmachine in ruby 1.9
+  EM.run do
+      Fiber.new {
+        EM.tick_loop do
+          Net::SNMP.dispatcher
+        end
+        session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic')
+        result = session.get("sysDescr.0")
+        puts result.varbinds[0].value
+
+      }.resume
+      EM.stop
+  end
+
+
+In the last example, note that you must wrap your code in Fiber.new {}.resume.   You could instead use the
+em-synchrony[https://github.com/igrigorik/em-synchrony] gem, and wrap your loop with EM.synchrony{}.
+Note that even though it appears you are making a blocking call, waiting for a return value, actually in the
+background, control is passed back to the reactor fiber to process other requests.  get() will return once the
+data is available.  This is all seemless to you, the developer.  Behold the power of fibers!
+
+
+== CAVEATS/DISCLAIMER
+
+THIS GEM COULD CRASH YOUR SYSTEM AND EAT YOUR CHILDREN!
+
+You have been warned.
+
+This is very much alpha software.  For more information on usage, take a look at the specs.   Currently it's
+only tested against net-snmp 5.5.   The net-snmp api seems pretty stable, but if anything changes, it could
+break this gem.  Please let me know if you find bugs or missing features.  Or better yet, send a pull request.
+
+
+== TODO
+
+* Better error handling.
+* SNMPv3 support needs testing for various security models
+* Better documentation
+* More tests
+* Cleanup cruft and unused code
+
 
 == Note on Patches/Pull Requests
  
