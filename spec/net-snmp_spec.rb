@@ -102,7 +102,7 @@ describe "NetSnmp" do
   it "should get next an array of oids" do
     Net::SNMP::Session.open(:peername => "test.net-snmp.org", :community => "demopublic" ) do |sess|
       result = sess.get_next(["sysUpTimeInstance.0"])
-      result.varbinds.first.name.should eql("1.3.6.1.2.1.1.4.0")
+      result.varbinds.first.oid.oid.should eql("1.3.6.1.2.1.1.4.0")
       result.varbinds.first.value.should match(/Net-SNMP Coders/)
     end
   end
@@ -111,13 +111,38 @@ describe "NetSnmp" do
   it "should get_bulk_request" do
     Net::SNMP::Session.open(:peername => "test.net-snmp.org" , :version => '2c', :community => 'demopublic') do |sess|
       result = sess.get_bulk(["sysContact.0"], :max_repetitions => 10)
-      result.varbinds.first.oid.should eql("1.3.6.1.2.1.1.5.0")
+      result.varbinds.first.oid.name.should eql("1.3.6.1.2.1.1.5.0")
       result.varbinds.first.value.should eql("test.net-snmp.org")
     end
   end
   
-  it "should get a table of values"
-  
+  it "should get a table of values with explicit columns" do
+    session = Net::SNMP::Session.open(:peername => "localhost", :version => '2c')
+    table = session.get_table("ifTable", :columns => ["ifIndex", "ifDescr", "ifName"])
+    puts table.inspect
+    table[0]['ifName'].should eql("lo0")
+    table[1]['ifName'].should eql("gif0")
+  end
+
+  it "should get a table of values" do
+    session = Net::SNMP::Session.open(:peername => "localhost", :version => '2c')
+    table = session.get_table("ifEntry")
+    puts table.inspect
+    table[0]['ifIndex'].should eql(1)
+    table[1]['ifIndex'].should eql(2)
+  end
+
+
+  it "should translate an oid" do
+
+    oid = Net::SNMP::OID.new("ifDescr.1")
+    oid.node.label.should eql("ifDescr")
+    oid.label.should eql("ifDescr.1")
+    oid.index.should eql("1")
+  end
+
+
+
   it "should work in event_machine" do
     require 'eventmachine'
     did_callback = false
@@ -134,8 +159,7 @@ describe "NetSnmp" do
         
       end
 
-      EM.add_timer(2) do
-        puts "in timer"
+      EM.add_timer(3) do
         did_callback.should be_true
         EM.stop
       end
@@ -161,8 +185,7 @@ describe "NetSnmp" do
 
         end
 
-        EM.add_timer(2) do
-          puts "in timer"
+        EM.add_timer(3) do
           did_callback.should eql(true)
           EM.stop
         end

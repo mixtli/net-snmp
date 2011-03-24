@@ -8,8 +8,10 @@ module Net::SNMP
       
       class << self
         def get_node(oid)
-          oid_ptr, oid_len_ptr = Net::SNMP._get_oid(oid)
-          struct = Wrapper.get_tree(oid_ptr, oid_len_ptr.read_int, Wrapper.get_tree_head().pointer)
+          if oid.kind_of?(String)
+            oid = Net::SNMP::OID.new(oid)
+          end
+          struct = Wrapper.get_tree(oid.pointer, oid.length_pointer.read_int, Wrapper.get_tree_head().pointer)
           new(struct.pointer)
         end
       end
@@ -25,7 +27,8 @@ module Net::SNMP
       
       def oid
         return @oid if @oid
-        @oid = Net::SNMP.get_oid(label)
+        puts "label = #{label}"
+        @oid = Net::SNMP::OID.new(label)
       end
 
       # actually seems like list is linked backward, so this will retrieve the previous oid numerically
@@ -46,6 +49,7 @@ module Net::SNMP
         while child = child.next
           children << child
         end
+        children.pop
         children.reverse  # For some reason, net-snmp returns everything backwards
       end
       

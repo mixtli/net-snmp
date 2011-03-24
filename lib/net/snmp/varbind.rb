@@ -16,12 +16,10 @@ module Net
       end
       
       def oid
-        @struct.name.read_array_of_long(@struct.name_length).join(".")
+        @oid ||= Net::SNMP::OID.new(@struct.name.read_array_of_long(@struct.name_length).join("."))
       end
       
-      def name
-        oid
-      end
+
 
       def value
         case object_type

@@ -1,20 +1,23 @@
 module Net
   module SNMP
     class OID
+      attr_reader :oid, :pointer, :length_pointer
       def initialize(oid)
+        puts "initializing #{oid}"
         @oid = oid
-        @oid_ptr = FFI::MemoryPointer.new(:ulong, Constants::MAX_OID_LEN)
-        @oid_len_ptr = FFI::MemoryPointer.new(:size_t)
-        @oid_len_ptr.write_int(Constants::MAX_OID_LEN)
+        @pointer = FFI::MemoryPointer.new(:ulong, Constants::MAX_OID_LEN)
+        @length_pointer = FFI::MemoryPointer.new(:size_t)
+        @length_pointer.write_int(Constants::MAX_OID_LEN)
 
         if @oid =~ /^[\d\.]*$/
-          if Wrapper.read_objid(@oid, @oid_ptr, @oid_len_ptr) == 0
+          if Wrapper.read_objid(@oid, @pointer, @length_pointer) == 0
             Wrapper.snmp_perror(@oid)
           end
         else
-          if Wrapper.get_node(@oid, @oid_ptr, @oid_len_ptr) == 0
+          if Wrapper.get_node(@oid, @pointer, @length_pointer) == 0
             Wrapper.snmp_perror(@oid)
           end
+          @oid = c_oid
         end
 
       end
@@ -23,17 +26,26 @@ module Net
         @oid
       end
 
+      def name
+        @oid
+      end
+
       def c_oid
-        @oid_ptr.read_array_of_long(@oid_len_ptr.read_int).join(".")
+        @pointer.read_array_of_long(length_pointer.read_int).join(".")
       end
 
-      def pointer
-        @oid_ptr
-      end
-      def length_pointer
-        @oid_len_ptr
+      def node
+        MIB::Node.get_node(oid)
       end
 
+      def index
+        oid.sub(node.oid.name + ".","")
+      end
+
+      def label
+        node.label + "." + index
+      end
+   
     end
   end
 end

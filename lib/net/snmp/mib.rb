@@ -13,7 +13,16 @@ module Net
         Node.get_node(oid)
       end
 
+      def self.add_mibdir(dirname)
+        Wrapper.add_mibdir(dirname)
+      end
 
+      def self.read_mib(filename)
+        Wrapper.read_mib(filename)
+      end
+      def self.read_module(name)
+        Wrapper.read_module(name)
+      end
       
     end
   end

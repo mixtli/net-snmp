@@ -2,13 +2,6 @@ module Net
   module SNMP
     module Inline
       extend Inliner
-      
-      #module LibC
-      #  extend FFI::Library
-      #  ffi_lib 'C'
-      #  attach_function :malloc, [ :uint ], :pointer
-      #  attach_function :free, [ :pointer ], :void
-      #end
 
       inline do |builder|
         builder.include "sys/select.h"
@@ -31,9 +24,6 @@ module Net
         }
 
       end
-
-
-      
     end
   end
 end

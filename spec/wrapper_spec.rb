@@ -5,68 +5,59 @@ describe "Net::SNMP::Wrapper" do
     community = "demopublic"
     peername = "test.net-snmp.org"
     
-    sess = Net::SNMP::Wrapper::SnmpSession.new
-    Net::SNMP::Wrapper.snmp_sess_init(sess.pointer)
-    sess.community = FFI::MemoryPointer.new(:pointer, community.length + 1)
-    #sess.community.autorelease = false
-    sess.community.write_string(community)
-    sess.community_len = community.length
-    sess.peername = FFI::MemoryPointer.new(:pointer, peername.length + 1)
-    #sess.peername.autorelease = false
-    sess.peername.write_string(peername)
-    sess.version = Net::SNMP::SNMP_VERSION_1
+    @session = Net::SNMP::Wrapper::SnmpSession.new(nil)
+    Net::SNMP::Wrapper.snmp_sess_init(@session.pointer)
+    @session.community = FFI::MemoryPointer.from_string(community)
+    @session.community_len = community.length
+    @session.peername = FFI::MemoryPointer.from_string(peername)
+    @session.version = Net::SNMP::Constants::SNMP_VERSION_1
 
-    @handle = Net::SNMP::Wrapper.snmp_sess_open(sess.pointer)
-    Net::SNMP::Wrapper.snmp_sess_session(@handle)
-
-    sess
+    @handle = Net::SNMP::Wrapper.snmp_sess_open(@session.pointer)
+    @session_struct = Net::SNMP::Wrapper.snmp_sess_session(@handle)
   end
 
   def make_pdu
-    pdu_ptr = Net::SNMP::Wrapper.snmp_pdu_create(Net::SNMP::SNMP_MSG_GET)
-    pdu = Net::SNMP::Wrapper::SnmpPdu.new(pdu_ptr)
-    anOID = FFI::MemoryPointer.new(:ulong, Net::SNMP::MAX_OID_LEN)
-    anOIDLen = FFI::MemoryPointer.new(:size_t)
-    anOIDLen.write_int(Net::SNMP::MAX_OID_LEN)
-    Net::SNMP::Wrapper.snmp_parse_oid("sysDescr.0", anOID, anOIDLen)
-    Net::SNMP::Wrapper.snmp_add_null_var(pdu.pointer, anOID, anOIDLen.read_int)
-    pdu
+    @pdu = Net::SNMP::Wrapper.snmp_pdu_create(Net::SNMP::Constants::SNMP_MSG_GET)
+    @oid_ptr = FFI::MemoryPointer.new(:ulong, Net::SNMP::Constants::MAX_OID_LEN)
+    @oid_len_ptr = FFI::MemoryPointer.new(:size_t)
+    @oid_len_ptr.write_int(Net::SNMP::Constants::MAX_OID_LEN)
+    puts @pdu.inspect
+
+    Net::SNMP::Wrapper.get_node("sysDescr.0", @oid_ptr, @oid_len_ptr)
+    Net::SNMP::Wrapper.snmp_pdu_add_variable(@pdu.pointer, @oid_ptr, @oid_len_ptr.read_int, Net::SNMP::Constants::ASN_NULL, nil, 0)
   end
 
   it "wrapper should snmpget synchronously" do
     #pending
-    sess = init_session
-    sess = Net::SNMP::Wrapper.snmp_open(sess.pointer)
+    init_session
 
-    pdu = make_pdu
+    make_pdu
 
     response_ptr = FFI::MemoryPointer.new(:pointer)
-    #response_ptr.autorelease = false
-    status = Net::SNMP::Wrapper.snmp_sess_synch_response(@handle, pdu.pointer, response_ptr)
+    status = Net::SNMP::Wrapper.snmp_sess_synch_response(@handle, @pdu.pointer, response_ptr)
     status.should eql(0)
-     
+
     response = Net::SNMP::Wrapper::SnmpPdu.new(response_ptr.read_pointer)
-    value = response.variables.val[:string].read_string
-    puts "val_len = #{response.variables.val_len}"
+    value = response.variables.val[:string].read_string(response.variables.val_len)
     value.should eql('test.net-snmp.org')
   end
 
   it "wrapper should snmpget asynchronously" do
-      pending
-      sess = init_session
-      pdu = make_pdu
+      #pending
+      init_session
+      make_pdu
       did_callback = 0
       result = nil
-      sess.callback = lambda do |operation, session, reqid, pdu_ptr, magic|
+      @session.callback = lambda do |operation, session, reqid, pdu_ptr, magic|
         did_callback = 1
         pdu = Net::SNMP::Wrapper::SnmpPdu.new(pdu_ptr)
         variables = Net::SNMP::Wrapper::VariableList.new(pdu.variables)
-        result = variables.val[:string].read_string
+        result = variables.val[:string].read_string(variables.val_len)
         0
       end
-      sess = Net::SNMP::Wrapper.snmp_open(sess.pointer)
-      Net::SNMP::Wrapper.snmp_send(sess.pointer, pdu)
-
+      sess = Net::SNMP::Wrapper.snmp_open(@session.pointer)
+      Net::SNMP::Wrapper.snmp_send(sess.pointer, @pdu)
+      sleep 1
       fdset = Net::SNMP::Wrapper.get_fd_set
       fds = FFI::MemoryPointer.new(:int)
       #fds.autorelease = false

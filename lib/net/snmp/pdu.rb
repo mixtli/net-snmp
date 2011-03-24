@@ -25,19 +25,19 @@ module Net
         end
       end
 
-       # For getbulk requests, repeaters and maxreps are stored in errstat and errindex
-        def non_repeaters=(nr)
-          @struct.errstat = nr
-        end
-        def non_repeaters
-          @struct.errstat
-        end
-        def max_repetitions=(mr)
-          @struct.errindex = mr
-        end
-        def max_repetitions
-          @struct.errindex
-        end
+      # For getbulk requests, repeaters and maxreps are stored in errstat and errindex
+      def non_repeaters=(nr)
+        @struct.errstat = nr
+      end
+      def non_repeaters
+        @struct.errstat
+      end
+      def max_repetitions=(mr)
+        @struct.errindex = mr
+      end
+      def max_repetitions
+        @struct.errindex
+      end
 
 
       def add_varbind(options)

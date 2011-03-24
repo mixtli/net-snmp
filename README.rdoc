@@ -111,6 +111,18 @@ background, control is passed back to the reactor fiber to process other request
 data is available.  This is all seemless to you, the developer.  Behold the power of fibers!
 
 
+== MIBs
+
+By default, net-snmp loads all of your system MIBS.  You can add additional mibs by adding them to your MIBS environment variable.
+You can also explicitly add MIBs using the MIB api.  For example:
+
+  Net::SNMP::MIB.add_mibdir("/usr/local/share/mibs")
+  Net::SNMP::MIB.read_mib("RFC1213-MIB.txt")
+
+Having the appropriate MIBs loaded will allow you to pass names instead of numeric oids to net-snmp methods.  To translate a single oid,
+you can call Net::SNMP.get_oid("sysDescr.0").  For more complex MIB parsing needs, see smi-ffi[http://github.com/mixtli/smi-ffi]
+
+
 == CAVEATS/DISCLAIMER
 
 THIS GEM COULD CRASH YOUR SYSTEM AND EAT YOUR CHILDREN!
@@ -122,6 +134,8 @@ only tested against net-snmp 5.5.   The net-snmp api seems pretty stable, but if
 break this gem.  Please let me know if you find bugs or missing features.  Or better yet, send a pull request.
 
 
+
+
 == TODO
 
 * Better error handling.
@@ -129,7 +143,7 @@ break this gem.  Please let me know if you find bugs or missing features.  Or be
 * Better documentation
 * More tests
 * Cleanup cruft and unused code
-
+* Implement SNMP traps/informs?
 
 == Note on Patches/Pull Requests
  

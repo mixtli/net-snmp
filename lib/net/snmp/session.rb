@@ -55,7 +55,6 @@ module Net
         if @sess.version == Constants::SNMP_VERSION_3
           @sess.securityLevel = options[:security_level] || Constants::SNMP_SEC_LEVEL_NOAUTH
 
-          oid = Net::SNMP::OID.new("1.3.6.1.6.3.10.1.1.2")
           @sess.securityAuthProto = case options[:auth_protocol]
               when :sha1
                 Net::SNMP::OID.new("1.3.6.1.6.3.10.1.1.3").pointer
@@ -155,7 +154,32 @@ module Net
       end
 
 
-      
+      # XXX This needs work.  Need to use getbulk for speed, guess maxrepeaters, etc..
+      # Also need to figure out how we can tell column names from something like ifTable
+      # instead of ifEntry.  Needs to handle errors, there are probably offset problems
+      # in cases of bad data, and various other problems.
+      def get_table(table_name, options = {})
+        column_names = options[:columns] || Net::SNMP::MIB::Node.get_node(table_name).children.collect {|c| c.label }
+        results = []
+        oidlist = column_names
+        done = false
+        catch :break_outer_loop do
+          while(result = get_next(oidlist))
+            oidlist = []
+            row = {}
+            result.varbinds.each_with_index do |vb, idx|
+              oid = vb.oid
+              row[column_names[idx]] = vb.value
+              oidlist << oid.label
+              if oid.label[0..column_names[idx].length - 1] != column_names[idx]
+                throw :break_outer_loop
+              end
+            end
+            results << row
+          end
+        end
+        results
+      end
       
       def error(msg)
         Wrapper.snmp_perror("snmp_error")
@@ -185,8 +209,6 @@ module Net
 
       private
       def send_pdu(pdu, &block)
-
-
         if defined?(EM) && EM.reactor_running? && !block_given?
           f = Fiber.current
 

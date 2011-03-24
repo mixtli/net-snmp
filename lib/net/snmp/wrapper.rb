@@ -244,10 +244,7 @@ module Wrapper
       # int             reported;       /* 1=report started in print_subtree... */
       # char           *defaultValue;
   end
-  attach_function :init_mib, [], :void
-  attach_function :read_all_mibs, [], :void
-  attach_function :get_tree_head, [], Tree.typed_pointer
-  attach_function :get_tree, [:pointer, :int, :pointer], Tree.typed_pointer
+
 
 
 #  puts "snmp_session size = #{SnmpSession.size}"
@@ -354,7 +351,7 @@ module Wrapper
   attach_function :asn_parse_double, [ :pointer, :pointer, :pointer, :pointer, :uint ], :pointer
 
   attach_function :snmp_pdu_create, [:int], SnmpPdu.typed_pointer
-  attach_function :get_node, [:pointer, :pointer, :pointer], :int
+  attach_function :get_node,[:string, :pointer, :pointer], :int
   attach_function :read_objid, [:string, :pointer, :pointer], :int
   attach_function :snmp_add_null_var, [:pointer, :pointer, :size_t], :pointer
   attach_function :snmp_sess_synch_response, [:pointer, :pointer, :pointer], :int
@@ -368,6 +365,19 @@ module Wrapper
   attach_function :select, [:int, :pointer, :pointer, :pointer, :pointer], :int
   attach_function :snmp_read, [:pointer], :void
   attach_function :generate_Ku, [:pointer, :int, :string, :int, :pointer, :pointer], :int
+
+  
+  # MIB functions
+  attach_function :init_mib, [], :void
+  attach_function :read_all_mibs, [], :void
+  attach_function :add_mibdir, [:string], :int
+  attach_function :read_mib, [:string], Tree.typed_pointer
+  attach_function :read_module, [:string], Tree.typed_pointer
+
+
+  attach_function :get_tree_head, [], Tree.typed_pointer
+  attach_function :get_tree, [:pointer, :int, :pointer], Tree.typed_pointer
+
   #attach_function :send_easy_trap, [:int, :int], :void
   #attach_function :send_trap_vars, [:int, :int, :pointer], :void
   #attach_function :send_v2trap, [:pointer], :void
