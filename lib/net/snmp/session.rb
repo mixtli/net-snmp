@@ -210,12 +210,15 @@ module Net
 
       private
       def send_pdu(pdu, &block)
+
         if defined?(EM) && EM.reactor_running? && !block_given?
+          Fiber.new {
           f = Fiber.current
 
           send_pdu pdu do | response |
             f.resume(response)
           end
+          }.resume
           Fiber.yield
         else
           if block
