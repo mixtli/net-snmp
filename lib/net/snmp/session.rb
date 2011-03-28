@@ -157,7 +157,8 @@ module Net
       # XXX This needs work.  Need to use getbulk for speed, guess maxrepeaters, etc..
       # Also need to figure out how we can tell column names from something like ifTable
       # instead of ifEntry.  Needs to handle errors, there are probably offset problems
-      # in cases of bad data, and various other problems.
+      # in cases of bad data, and various other problems.  Also need to add async support.
+      # Maybe return a hash with index as key?
       def get_table(table_name, options = {})
         column_names = options[:columns] || Net::SNMP::MIB::Node.get_node(table_name).children.collect {|c| c.label }
         results = []

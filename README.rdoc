@@ -15,28 +15,28 @@ It provides classes for sessions, pdus, varbinds, and more.
 
 == USAGE
 
-  You must have the net-snmp libraries installed and available on the system.  Check to make sure
+You must have the net-snmp libraries installed and available on the system.  Check to make sure
 they are available in your library path.  If necessary, add them to your shell like so:
 
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/local/lib/net-snmp
+  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/local/lib/net-snmp
 
 
-  You can use the library in two styles:  synchronously or asynchronously.  If you use the synchronous style,
+You can use the library in two styles:  synchronously or asynchronously.  If you use the synchronous style,
 calls will block until a result is returned or the request times out.  If you use the asynchronous style, you
 must provide a block to the client methods, which will be called when the data is ready.
 
-  In order for your callbacks to fire, you must call Net::SNMP.dispatcher.  You may pass a timeout argument to
+In order for your callbacks to fire, you must call Net::SNMP.dispatcher.  You may pass a timeout argument to
 the dispatcher.  If you pass false, the call will block forever until data is ready.  If you pass an integer, it will block for
 <timeout> seconds.  If you pass nil (the default), it will do a poll and return immediately.  In that case, you
 will have to arrange for the dispatcher to run periodically.  This can be done in your main event loop or in a
 seperate thread.
 
-  If you like eventmachine, it's very easy to set up the dispatcher to run periodically in the adaptor.  If you're
+If you like eventmachine, it's very easy to set up the dispatcher to run periodically in the adaptor.  If you're
 using eventmachine with ruby 1.9, the library uses fibers behind the scenes to turn your synchronous calls into asynchronous
 calls, while allowing you to use a synchronous calling style.  Examples of all these scenarios are below.
 
 == FFI
-  This library uses ruby-ffi to access the net-snmp libraries.  If you want to use the C library directly, the wrapper
+This library uses ruby-ffi to access the net-snmp libraries.  If you want to use the C library directly, the wrapper
 functions are defined in Net::SNMP::Wrapper.  You can call them like so:
   Net::SNMP::Wrapper.snmp_perror("some_error")
 
@@ -132,8 +132,6 @@ You have been warned.
 This is very much alpha software.  For more information on usage, take a look at the specs.   Currently it's
 only tested against net-snmp 5.5.   The net-snmp api seems pretty stable, but if anything changes, it could
 break this gem.  Please let me know if you find bugs or missing features.  Or better yet, send a pull request.
-
-
 
 
 == TODO

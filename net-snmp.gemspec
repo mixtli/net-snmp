@@ -4,7 +4,7 @@ require "net/snmp/version"
 
 Gem::Specification.new do |s|
   s.name        = "net-snmp"
-  s.version     = Net::Snmp::VERSION
+  s.version     = Net::SNMP::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Ron McClain"]
   s.email       = ["mixtli@github.com"]

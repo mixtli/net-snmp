@@ -20,7 +20,6 @@ describe "NetSnmp" do
     did_callback = false
     session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |s|
       s.get(["sysDescr.0", "sysContact.0"]) do |result|
-        puts "in callback"
         did_callback = true
         result.varbinds[0].value.should eql("test.net-snmp.org")
         result.varbinds[1].value.should match(/Coders/)
@@ -31,13 +30,10 @@ describe "NetSnmp" do
   end
 
 
-
-
   it "should get an oid asynchronously in a thread" do
     did_callback = false
     session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |s|
       s.get(["sysDescr.0", "sysContact.0"]) do |result|
-        puts "in callback"
         did_callback = true
         result.varbinds[0].value.should eql("test.net-snmp.org")
         result.varbinds[1].value.should match(/Coders/)
@@ -119,7 +115,6 @@ describe "NetSnmp" do
   it "should get a table of values with explicit columns" do
     session = Net::SNMP::Session.open(:peername => "localhost", :version => '2c')
     table = session.get_table("ifTable", :columns => ["ifIndex", "ifDescr", "ifName"])
-    puts table.inspect
     table[0]['ifName'].should eql("lo0")
     table[1]['ifName'].should eql("gif0")
   end
@@ -127,7 +122,6 @@ describe "NetSnmp" do
   it "should get a table of values" do
     session = Net::SNMP::Session.open(:peername => "localhost", :version => '2c')
     table = session.get_table("ifEntry")
-    puts table.inspect
     table[0]['ifIndex'].should eql(1)
     table[1]['ifIndex'].should eql(2)
   end
@@ -178,8 +172,6 @@ describe "NetSnmp" do
         session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |s|
           s.get("sysDescr.0") do |result|
             did_callback = true
-            puts "INHERERERERERERE"
-            puts result.inspect
             result.varbinds[0].value.should eql("test.net-snmp.org")
           end
 
@@ -199,26 +191,19 @@ describe "NetSnmp" do
     require 'eventmachine'
     did_callback = false
     EM.run do
-      puts "em fiber = #{Fiber.current.inspect}"
       Fiber.new {
-        puts "inner fiber = #{Fiber.current.inspect}"
 
         EM.tick_loop do
-          #puts "tick_fiber = #{Fiber.current.inspect}"
 
           Net::SNMP.dispatcher
         end
         sleep 1
         session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic')
-        puts "calling aget"
         result = session.get("sysDescr.0")
         result.varbinds[0].value.should eql("test.net-snmp.org")
-
-
       }.resume
       EM.stop
     end
-
   end
 
 

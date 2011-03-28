@@ -214,37 +214,14 @@ module Wrapper
       :reported, :int,
       :defaultValue, :pointer
     )
-      # struct tree    *child_list;     /* list of children of this node */
-      # struct tree    *next_peer;      /* Next node in list of peers */
-      # struct tree    *next;   /* Next node in hashed list of names */
-      # struct tree    *parent;
-      # char           *label;  /* This node's textual name */
-      # u_long          subid;  /* This node's integer subidentifier */
-      # int             modid;  /* The module containing this node */
-      # int             number_modules;
-      # int            *module_list;    /* To handle multiple modules */
-      # int             tc_index;       /* index into tclist (-1 if NA) */
-      # int             type;   /* This node's object type */
-      # int             access; /* This nodes access */
-      # int             status; /* This nodes status */
-      # struct enum_list *enums;        /* (optional) list of enumerated integers */
-      # struct range_list *ranges;
-      # struct index_list *indexes;
-      # char           *augments;
-      # struct varbind_list *varbinds;
-      # char           *hint;
-      # char           *units;
-      # int             (*printomat) (u_char **, size_t *, size_t *, int,
-      #                               const netsnmp_variable_list *,
-      #                               const struct enum_list *, const char *,
-      #                               const char *);
-      # void            (*printer) (char *, const netsnmp_variable_list *, const struct enum_list *, const char *, const char *);   /* Value printing function */
-      # char           *description;    /* description (a quoted string) */
-      # char           *reference;    /* references (a quoted string) */
-      # int             reported;       /* 1=report started in print_subtree... */
-      # char           *defaultValue;
   end
-
+  class IndexList < NiceFFI::Struct
+    layout(
+        :next, :pointer,
+        :ilabel, :pointer,
+        :isimplied, :char
+    )
+  end
 
 
 #  puts "snmp_session size = #{SnmpSession.size}"
@@ -373,7 +350,7 @@ module Wrapper
   attach_function :add_mibdir, [:string], :int
   attach_function :read_mib, [:string], Tree.typed_pointer
   attach_function :read_module, [:string], Tree.typed_pointer
-
+  attach_function :snmp_set_save_descriptions, [:int], :void
 
   attach_function :get_tree_head, [], Tree.typed_pointer
   attach_function :get_tree, [:pointer, :int, :pointer], Tree.typed_pointer

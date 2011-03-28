@@ -1,3 +1,4 @@
+Net::SNMP::Wrapper.snmp_set_save_descriptions(1)
 module Net
   module SNMP
     module MIB

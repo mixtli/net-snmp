@@ -1,4 +1,3 @@
-
 module Net::SNMP
   module MIB
     class Node
@@ -24,7 +23,11 @@ module Net::SNMP
           raise "invalid type"
         end
       end
-      
+
+      def description
+        @struct.description.read_string
+      end
+
       def oid
         return @oid if @oid
         puts "label = #{label}"
