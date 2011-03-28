@@ -2,7 +2,7 @@ module Net
 module SNMP
 module Wrapper
   extend NiceFFI::Library
-  ffi_lib "/opt/local/lib/libnetsnmp.dylib"
+  ffi_lib "libnetsnmp"
   #ffi_lib "netsnmp"
   typedef :u_long, :oid
 

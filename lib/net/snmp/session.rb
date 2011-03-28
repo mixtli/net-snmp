@@ -161,22 +161,37 @@ module Net
       # Maybe return a hash with index as key?
       def get_table(table_name, options = {})
         column_names = options[:columns] || Net::SNMP::MIB::Node.get_node(table_name).children.collect {|c| c.label }
+        puts "got column names #{column_names.inspect}"
         results = []
         oidlist = column_names
         done = false
         catch :break_outer_loop do
+          first_loop = true
+
           while(result = get_next(oidlist))
+            puts "got result #{result.inspect}"
             oidlist = []
             row = {}
             result.varbinds.each_with_index do |vb, idx|
+              puts "got vb #{vb.value.inspect}"
               oid = vb.oid
               row[column_names[idx]] = vb.value
               oidlist << oid.label
               if oid.label[0..column_names[idx].length - 1] != column_names[idx]
-                throw :break_outer_loop
+                puts "breaking"
+                if first_loop
+                  puts "deleting #{oid.label}"
+                  oidlist.delete(oid.label)
+                  column_names.delete_at(idx)
+                  puts "columns now #{column_names.inspect}"
+                else
+                  throw :break_outer_loop
+
+                end
               end
             end
             results << row
+            first_loop = false
           end
         end
         results
@@ -210,15 +225,18 @@ module Net
 
       private
       def send_pdu(pdu, &block)
-
+        #puts "send_pdu #{Fiber.current.inspect}"
         if defined?(EM) && EM.reactor_running? && !block_given?
-          Fiber.new {
+          #puts "REACTORRUNNING"
           f = Fiber.current
 
           send_pdu pdu do | response |
             f.resume(response)
           end
-          }.resume
+
+
+
+          
           Fiber.yield
         else
           if block

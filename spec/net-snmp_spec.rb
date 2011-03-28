@@ -126,7 +126,15 @@ describe "NetSnmp" do
     table[1]['ifIndex'].should eql(2)
   end
 
-
+  it "should get a table of values ipAddrEntry" do
+    puts Net::SNMP::Constants::ASN_IPADDRESS
+    session = Net::SNMP::Session.open(:peername => "localhost", :version => '2c')
+    table = session.get_table("ipAddrEntry")
+    puts table.inspect
+    table[0]['ipAdEntAddr'].should eql('127.0.0.1')
+    table[1]['ipAdEntNetMask'].should eql('255.255.255.0')
+  end
+  
   it "should translate an oid" do
 
     oid = Net::SNMP::OID.new("ifDescr.1")

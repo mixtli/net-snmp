@@ -3,7 +3,6 @@ module Net
     class OID
       attr_reader :oid, :pointer, :length_pointer
       def initialize(oid)
-        puts "initializing #{oid}"
         @oid = oid
         @pointer = FFI::MemoryPointer.new(:ulong, Constants::MAX_OID_LEN)
         @length_pointer = FFI::MemoryPointer.new(:size_t)

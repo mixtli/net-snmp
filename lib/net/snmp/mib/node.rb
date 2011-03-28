@@ -30,7 +30,6 @@ module Net::SNMP
 
       def oid
         return @oid if @oid
-        puts "label = #{label}"
         @oid = Net::SNMP::OID.new(label)
       end
 
