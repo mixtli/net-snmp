@@ -1,10 +1,12 @@
 # -*- encoding: utf-8 -*-
-$:.push File.expand_path("../lib", __FILE__)
-require "net/snmp/version"
+lib = File.expand_path("../lib", __FILE__)
+puts "lib = #{lib}"
+$:.unshift lib
+#require 'net/snmp/version'
 
 Gem::Specification.new do |s|
   s.name        = "net-snmp"
-  s.version     = Net::SNMP::VERSION
+  s.version     = '0.1.3'
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Ron McClain"]
   s.email       = ["mixtli@github.com"]
@@ -20,5 +22,5 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.add_development_dependency "rspec"
   s.add_development_dependency "eventmachine"
-  s.add_dependency "nice-ffi"
+  #s.add_dependency "nice-ffi"
 end

@@ -163,35 +163,41 @@ module Net
         column_names = options[:columns] || Net::SNMP::MIB::Node.get_node(table_name).children.collect {|c| c.label }
         puts "got column names #{column_names.inspect}"
         results = []
-        oidlist = column_names
-        done = false
-        catch :break_outer_loop do
-          first_loop = true
 
+        first_result = get_next(column_names)
+        oidlist = []
+        good_column_names = []
+        row = {}
+
+        first_result.varbinds.each_with_index do |vb, idx|
+          oid = vb.oid
+          if oid.label[0..column_names[idx].length - 1] == column_names[idx]
+            oidlist << oid.label
+            good_column_names << column_names[idx]
+            row[column_names[idx]] = vb.value
+          end
+        end
+        results << row
+
+        puts "got first row = #{row.inspect}"
+        puts "good columns = #{good_column_names.inspect}"
+
+        catch :break_main_loop do
+          puts "getting #{oidlist}"
           while(result = get_next(oidlist))
             puts "got result #{result.inspect}"
             oidlist = []
             row = {}
             result.varbinds.each_with_index do |vb, idx|
-              puts "got vb #{vb.value.inspect}"
-              oid = vb.oid
-              row[column_names[idx]] = vb.value
-              oidlist << oid.label
-              if oid.label[0..column_names[idx].length - 1] != column_names[idx]
-                puts "breaking"
-                if first_loop
-                  puts "deleting #{oid.label}"
-                  oidlist.delete(oid.label)
-                  column_names.delete_at(idx)
-                  puts "columns now #{column_names.inspect}"
-                else
-                  throw :break_outer_loop
-
-                end
+              puts "got #{vb.oid.label} #{vb.value.inspect}, type = #{vb.object_type}"
+              row[good_column_names[idx]] = vb.value
+              oidlist << vb.oid.label
+              if vb.oid.label[0..good_column_names[idx].length - 1] != good_column_names[idx]
+                puts "#{vb.oid.label} != #{good_column_names[idx]}"
+                throw :break_main_loop   
               end
             end
             results << row
-            first_loop = false
           end
         end
         results

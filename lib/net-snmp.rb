@@ -1,7 +1,10 @@
 require 'forwardable'
 require 'nice-ffi'
 require 'fiber'
+puts "in net-snmp"
+
 %w(snmp snmp/version snmp/constants snmp/oid snmp/error snmp/pdu snmp/wrapper snmp/session snmp/varbind snmp/mib snmp/mib/node).each do |f|
+  puts
   require "#{File.dirname(__FILE__)}/net/#{f}"
 end
 Net::SNMP::MIB.init

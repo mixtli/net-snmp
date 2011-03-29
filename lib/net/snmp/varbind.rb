@@ -25,15 +25,10 @@ module Net
         case object_type
         when Constants::ASN_OCTET_STR
           struct.val[:string].read_string(struct.val_len)
-        when Constants::ASN_INTEGER, Constants::ASN_COUNTER
+        when Constants::ASN_INTEGER, Constants::ASN_COUNTER, Constants::ASN_GAUGE
           struct.val[:integer].read_int
         when Constants::ASN_IPADDRESS
           struct.val[:objid].read_string(struct.val_len).unpack('CCCC').join(".")
-          #puts "here #{arr.to_s}"
-          #puts arr[0]
-          #puts arr[1]
-          #puts arr[2]
-          #puts arr[3]
         end
       end
     end
