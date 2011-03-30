@@ -1,6 +1,5 @@
 # -*- encoding: utf-8 -*-
 lib = File.expand_path("../lib", __FILE__)
-puts "lib = #{lib}"
 $:.unshift lib
 #require 'net/snmp/version'
 
