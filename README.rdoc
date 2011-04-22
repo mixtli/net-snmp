@@ -69,8 +69,9 @@ An asynchronous SNMP-GET
 Running the dispatcher in a seperate thread
 
     dispatcher_thread = Thread.new do
-      while Net::SNMP.dispatcher == 0
-        sleep 1
+      loop do
+        Net::SNMP.dispatcher(0.1)  # block for .1 seconds. passing nil will peg your cpu.
+        #Net::SNMP.dispatcher(false) # or pass false to block forever
       end
     end
 
@@ -79,12 +80,18 @@ Running the dispatcher in a seperate thread
         puts result.varbinds[0].value
       end
     end
+    sleep 2 # wait for results to come in before reaping dispatcher thread
     dispatcher_thread.join
 
 Running the dispatcher from eventmachine
     EM.run do
-      tickloop = EM.tick_loop do
-        Net::SNMP.dispatcher
+      myproc = Proc.new do
+        EM.next_tick do
+          Net::SNMP.dispatcher(nil)
+          EM.add_timer(0.1) do
+            myproc.call
+          end
+        end
       end
 
       Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |session|

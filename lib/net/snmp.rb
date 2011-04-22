@@ -12,8 +12,9 @@ module Net
     def self.dispatcher(timeout = nil)
         fdset = Net::SNMP::Wrapper.get_fd_set
         num_fds = FFI::MemoryPointer.new(:int)
-        tv_sec = timeout || 0
-        tval = Net::SNMP::Wrapper::TimeVal.new(:tv_sec => tv_sec, :tv_usec => 0)
+        tv_sec = timeout.round || 0
+        tv_usec = (timeout - timeout.round) * 1000000
+        tval = Net::SNMP::Wrapper::TimeVal.new(:tv_sec => tv_sec, :tv_usec => tv_usec)
         block = FFI::MemoryPointer.new(:int)
 
         if timeout.nil?
