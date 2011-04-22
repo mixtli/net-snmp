@@ -21,13 +21,21 @@ module Net
         else
           block.write_int(1)
         end
-
+        #puts "calling snmp_select_info"
         Net::SNMP::Wrapper.snmp_select_info(num_fds, fdset, tval.pointer, block )
+        #puts "done snmp_select_info."
         num_ready = 0
+        #puts "block = #{block.read_int}"
+
+        #puts "numready = #{num_fds.read_int}"
+        #puts "tv = #{tval[:tv_sec]} #{tval[:tv_usec]}"
         if num_fds.read_int > 0
           tv = timeout == false ? nil : tval
+          #puts "calling select"
           num_ready = Net::SNMP::Wrapper.select(num_fds.read_int, fdset, nil, nil, tv)
+          #puts "done select.  num_ready = #{num_ready}"
           Net::SNMP::Wrapper.snmp_read(fdset)
+        else
         end
         num_ready
     end

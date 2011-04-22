@@ -40,6 +40,10 @@ This library uses ruby-ffi to access the net-snmp libraries.  If you want to use
 functions are defined in Net::SNMP::Wrapper.  You can call them like so:
   Net::SNMP::Wrapper.snmp_perror("some_error")
 
+== NOTES
+  For now, you have to free the pdu when you're done with it in sync calls or you'll leak memory.
+It's not necessary in async calls because the library automatically frees the pdu after the callback fires.
+This is where destructors would be handy.
 
 
 == EXAMPLES
@@ -50,7 +54,8 @@ A simple synchronous SNMP-GET
   session = Net::SNMP::Session.open(:peername => "test.net-snmp.org", :community => "demopublic" )
   result = session.get("sysDescr.0")
   puts result.varbinds.first.value
- 
+  result.free    # you have to manually free the memory in sync calls for now.   
+
 An asynchronous SNMP-GET
 
     Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |session|

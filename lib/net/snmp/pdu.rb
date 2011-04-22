@@ -1,4 +1,4 @@
-module Net
+module Net 
   module SNMP
     class PDU
       extend Forwardable
@@ -75,6 +75,9 @@ module Net
         Wrapper::snmp_errstring(errstat)
       end
 
+      def free
+        Wrapper.snmp_free_pdu(@struct.pointer)
+      end
     end
   end
 end

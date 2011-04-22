@@ -6,11 +6,11 @@ module Net
       extend Forwardable
       attr_accessor :struct, :callback
       def_delegator :@struct, :pointer
-      @sessions = []
+      #@sessions = []
       @requests = {}
       class << self
-        attr_accessor :sessions, :requests
-        def open(options)
+        attr_accessor :requests
+        def open(options = {})
           session = new(options)
           if block_given?
             yield session
@@ -19,13 +19,13 @@ module Net
         end
       end
 
-      def initialize(options)
+      def initialize(options = {})
+        options[:peername] ||= 'localhost'
         options[:community] ||= "public"
         options[:community_len] = options[:community].length
         options[:version] ||= Constants::SNMP_VERSION_1
         @callback = options[:callback]
-        @requests = {}
-        self.class.sessions << self
+        #self.class.sessions << self
         @sess = Wrapper::SnmpSession.new(nil)
         Wrapper.snmp_sess_init(@sess.pointer)
         #options.each_pair {|k,v| ptr.send("#{k}=", v)}
@@ -87,7 +87,7 @@ module Net
 
         end
         
-        
+        # General callback just takes the pdu, calls the session callback if any, then the request specific callback.
         @sess.callback = lambda do |operation, session, reqid, pdu_ptr, magic|
           pdu = Net::SNMP::PDU.new(pdu_ptr)
           run_callbacks(operation, reqid, pdu, magic)
@@ -109,10 +109,6 @@ module Net
         end        
       end
 
-
-
-
-#
 
       def get(oidlist, options = {}, &block)
         pdu = Net::SNMP::PDU.new(Constants::SNMP_MSG_GET)
@@ -161,7 +157,6 @@ module Net
       # Maybe return a hash with index as key?
       def get_table(table_name, options = {})
         column_names = options[:columns] || Net::SNMP::MIB::Node.get_node(table_name).children.collect {|c| c.label }
-        puts "got column names #{column_names.inspect}"
         results = []
 
         first_result = get_next(column_names)
@@ -179,22 +174,17 @@ module Net
         end
         results << row
 
-        puts "got first row = #{row.inspect}"
-        puts "good columns = #{good_column_names.inspect}"
-
         catch :break_main_loop do
-          puts "getting #{oidlist}"
           while(result = get_next(oidlist))
-            puts "got result #{result.inspect}"
+            #puts "got result #{result.inspect}"
             oidlist = []
             row = {}
             result.varbinds.each_with_index do |vb, idx|
-              puts "got #{vb.oid.label} #{vb.value.inspect}, type = #{vb.object_type}"
+              #puts "got #{vb.oid.label} #{vb.value.inspect}, type = #{vb.object_type}"
               row[good_column_names[idx]] = vb.value
               oidlist << vb.oid.label
               if vb.oid.label[0..good_column_names[idx].length - 1] != good_column_names[idx]
-                puts "#{vb.oid.label} != #{good_column_names[idx]}"
-                throw :break_main_loop   
+                throw :break_main_loop
               end
             end
             results << row
@@ -239,10 +229,6 @@ module Net
           send_pdu pdu do | response |
             f.resume(response)
           end
-
-
-
-          
           Fiber.yield
         else
           if block
@@ -250,14 +236,14 @@ module Net
             if (status = Net::SNMP::Wrapper.snmp_send(@struct, pdu.pointer)) == 0
               error("snmp_get async failed")
             end
+            pdu.free
             nil
           else
             response_ptr = FFI::MemoryPointer.new(:pointer)
-
             #Net::SNMP::Wrapper.print_session(@struct)
             #Net::SNMP::Wrapper.print_pdu(pdu.struct)
             status = Wrapper.snmp_synch_response(@struct, pdu.pointer, response_ptr)
-
+            #pdu.free
             if status != 0
               error("snmp_get failed #{status}")
             else
