@@ -5,7 +5,7 @@ $:.unshift lib
 
 Gem::Specification.new do |s|
   s.name        = "net-snmp"
-  s.version     = '0.1.3'
+  s.version     = '0.1.4'
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Ron McClain"]
   s.email       = ["mixtli@github.com"]
