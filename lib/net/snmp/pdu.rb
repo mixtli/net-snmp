@@ -3,7 +3,7 @@ module Net
     class PDU
       extend Forwardable
       attr_accessor :struct, :varbinds, :callback
-      def_delegators :struct, :reqid, :pointer, :errstat, :errindex, :non_repeaters=
+      def_delegators :struct, :pointer
 
       def initialize(arg)
         @varbinds = []
@@ -38,30 +38,63 @@ module Net
       def max_repetitions
         @struct.errindex
       end
+      def enterprise=(e_oid)
+        @enterprise = e_iod
+        @struct.enterprise = e_oid.pointer
+        @struct.enterprise_length = e_oid.size
+      end
+      def enterprise
+        @enterprise
+      end
+      
+      def agent_addr=(addr)
+        @struct.agent_addr = addr.split('.').pack("CCCC")
+        @agent_addr = addr
+      end
 
+      def agent_addr
+        @agent_addr
+      end
+
+
+      def method_missing(m, *args)
+        if @struct.respond_to?(m)
+          @struct.send(m, *args)
+        else
+          super
+        end
+      end
 
       def add_varbind(options)
-
         options[:type] ||= case options[:value]
-        when String
-          Constants::ASN_OCTET_STR
-        when nil
-          Constants::ASN_NULL
-        else
-          raise "Unknown value type"
+          when String
+            Constants::ASN_OCTET_STR
+          when Fixnum
+            Constants::ASN_INTEGER
+          when nil
+            Constants::ASN_NULL
+          else
+            raise "Unknown value type"
         end
 
+        value = options[:value]
         value_len = case options[:value]
-        when String
-          options[:value].length
-        else
-          0
+          when String
+            options[:value].length
+          when nil
+            0
+          else
+            options[:value].size
         end
 
+
+        if value.respond_to?(:pointer)
+          value = value.pointer
+        end
 
         oid = Net::SNMP::OID.new(options[:oid])
 
-        var_ptr = Wrapper.snmp_pdu_add_variable(@struct.pointer, oid.pointer, oid.length_pointer.read_int, options[:type], options[:value], value_len)
+        var_ptr = Wrapper.snmp_pdu_add_variable(@struct.pointer, oid.pointer, oid.length_pointer.read_int, options[:type], value, value_len)
         varbind = Varbind.new(var_ptr)
         #Wrapper.print_varbind(varbind.struct)
         varbinds << varbind

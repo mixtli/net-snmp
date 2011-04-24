@@ -251,6 +251,7 @@ module Wrapper
 #  attach_function :netsnmp_oid_tree_equals, [ :pointer, :uint, :pointer, :uint ], :int
   attach_function :netsnmp_oid_is_subtree, [ :pointer, :uint, :pointer, :uint ], :int
   attach_function :netsnmp_oid_find_prefix, [ :pointer, :uint, :pointer, :uint ], :int
+  attach_function :netsnmp_transport_open_client, [:string, :pointer], :pointer
   attach_function :init_snmp, [ :string ], :void
   attach_function :snmp_pdu_build, [ :pointer, :pointer, :pointer ], :pointer
   attach_function :snmpv3_parse, [ :pointer, :pointer, :pointer, :pointer, :pointer ], :int

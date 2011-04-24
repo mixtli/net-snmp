@@ -25,11 +25,12 @@ You can use the library in two styles:  synchronously or asynchronously.  If you
 calls will block until a result is returned or the request times out.  If you use the asynchronous style, you
 must provide a block to the client methods, which will be called when the data is ready.
 
-In order for your callbacks to fire, you must call Net::SNMP.dispatcher.  You may pass a timeout argument to
+In order for your callbacks to fire, you must call Net::SNMP::Dispatcher.poll  You may pass a timeout argument to
 the dispatcher.  If you pass false, the call will block forever until data is ready.  If you pass an integer, it will block for
 <timeout> seconds.  If you pass nil (the default), it will do a poll and return immediately.  In that case, you
 will have to arrange for the dispatcher to run periodically.  This can be done in your main event loop or in a
-seperate thread.
+seperate thread.  There are convenience class methods in Net::SNMP::Dispatcher called run_loop, fiber_loop, em_loop, thread_loop
+and so on for setting up various polling loops.  Or, you can roll your own loop.
 
 If you like eventmachine, it's very easy to set up the dispatcher to run periodically in the adaptor.  If you're
 using eventmachine with ruby 1.9, the library uses fibers behind the scenes to turn your synchronous calls into asynchronous
@@ -57,43 +58,16 @@ A simple synchronous SNMP-GET
   result.free    # you have to manually free the memory in sync calls for now.   
 
 An asynchronous SNMP-GET
-
     Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |session|
       session.get(["sysDescr.0", "sysContact.0"]) do |result|
         puts result.varbinds[0].value
       end
     end
-    Net::SNMP.dispatcher(false)  #Setting timeout to false causes dispatcher to block until data is ready
-
-
-Running the dispatcher in a seperate thread
-
-    dispatcher_thread = Thread.new do
-      loop do
-        Net::SNMP.dispatcher(0.1)  # block for .1 seconds. passing nil will peg your cpu.
-        #Net::SNMP.dispatcher(false) # or pass false to block forever
-      end
-    end
-
-    Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |s|
-      s.get(["sysDescr.0", "sysContact.0"]) do |result|
-        puts result.varbinds[0].value
-      end
-    end
-    sleep 2 # wait for results to come in before reaping dispatcher thread
-    dispatcher_thread.join
+    Net::SNMP::Dispatcher.poll(false)  #Setting timeout to false causes dispatcher to block until data is ready
 
 Running the dispatcher from eventmachine
     EM.run do
-      myproc = Proc.new do
-        EM.next_tick do
-          Net::SNMP.dispatcher(nil)
-          EM.add_timer(0.1) do
-            myproc.call
-          end
-        end
-      end
-
+      Net::SNMP::Dispatcher.em_loop
       Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |session|
         session.get("sysDescr.0") do |result|
           puts result.varbinds[0].value
@@ -103,16 +77,13 @@ Running the dispatcher from eventmachine
 
 Using synchronous style with eventmachine in ruby 1.9
   EM.run do
+      Net::SNMP::Dispatcher.fiber_loop
       Fiber.new {
-        EM.tick_loop do
-          Net::SNMP.dispatcher
-        end
         session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic')
         result = session.get("sysDescr.0")
         puts result.varbinds[0].value
-
+        EM.stop
       }.resume
-      EM.stop
   end
 
 
@@ -135,11 +106,18 @@ Having the appropriate MIBs loaded will allow you to pass names instead of numer
 you can call Net::SNMP.get_oid("sysDescr.0").  For more complex MIB parsing needs, see smi-ffi[http://github.com/mixtli/smi-ffi]
 
 
+== BUGS
+Right now, snmpv3 is only working  using synchronous API.   Asynchronous calls seem to miss packets.
+I have no idea why it would be different for v3 vs v1/v2.  If anyone knows, tell me ;)
+
+
 == CAVEATS/DISCLAIMER
 
 THIS GEM COULD CRASH YOUR SYSTEM AND EAT YOUR CHILDREN!
 
 You have been warned.
+
+The API is subject to change.
 
 This is very much alpha software.  For more information on usage, take a look at the specs.   Currently it's
 only tested against net-snmp 5.5.   The net-snmp api seems pretty stable, but if anything changes, it could

@@ -5,6 +5,7 @@ module Net
     class Session
       extend Forwardable
       attr_accessor :struct, :callback
+      attr_reader :version
       def_delegator :@struct, :pointer
       #@sessions = []
       @requests = {}
@@ -25,6 +26,7 @@ module Net
         options[:community_len] = options[:community].length
         options[:version] ||= Constants::SNMP_VERSION_1
         @callback = options[:callback]
+        @version = options[:version] || 1
         #self.class.sessions << self
         @sess = Wrapper::SnmpSession.new(nil)
         Wrapper.snmp_sess_init(@sess.pointer)
@@ -43,14 +45,12 @@ module Net
           Constants::SNMP_VERSION_1
         end
 
-
         if options[:timeout]
           @sess.timeout = options[:timeout] * 1000000
         end
         if options[:retries]
           @sess.retries = options[:retries]
         end
-
 
         if @sess.version == Constants::SNMP_VERSION_3
           @sess.securityLevel = options[:security_level] || Constants::SNMP_SEC_LEVEL_NOAUTH
@@ -70,7 +70,6 @@ module Net
           if options[:context]
             @sess.contextName = FFI::MemoryPointer.from_string(options[:context])
             @sess.contextNameLen = options[:context].length
-
           end
 
           if options[:username]
@@ -84,13 +83,19 @@ module Net
           unless key_result == Constants::SNMPERR_SUCCESS
             Wrapper.snmp_perror("netsnmp")
           end
-
         end
         
         # General callback just takes the pdu, calls the session callback if any, then the request specific callback.
         @sess.callback = lambda do |operation, session, reqid, pdu_ptr, magic|
-          pdu = Net::SNMP::PDU.new(pdu_ptr)
-          run_callbacks(operation, reqid, pdu, magic)
+          callback.call(operation, reqid, pdu, magic) if callback
+
+          puts "in main callback"
+          if self.class.requests[reqid]
+            puts "got request"
+            pdu = Net::SNMP::PDU.new(pdu_ptr)
+            self.class.requests[reqid].call(pdu)
+            self.class.requests.delete(reqid)
+          end
           0
         end
 
@@ -99,15 +104,6 @@ module Net
         #@struct = Wrapper.snmp_sess_session(@handle)
       end
 
-     
-
-      def run_callbacks(operation, reqid, pdu, magic)
-        callback.call(operation, reqid, pdu, magic) if callback
-        if self.class.requests[reqid]
-          self.class.requests[reqid].call(pdu)
-          self.class.requests.delete(reqid)
-        end        
-      end
 
 
       def get(oidlist, options = {}, &block)
@@ -132,6 +128,7 @@ module Net
         pdu = Net::SNMP::PDU.new(Constants::SNMP_MSG_GETBULK)
         oidlist = [oidlist] unless oidlist.kind_of?(Array)
         oidlist.each do |oid|
+          puts "adding #{oid.inspect}"
           pdu.add_varbind(:oid => oid)
         end
         pdu.non_repeaters = options[:non_repeaters] || 0
@@ -193,6 +190,27 @@ module Net
         results
       end
       
+
+      def default_max_repeaters
+        # We could do something based on transport here.  25 seems safe
+        25
+      end
+
+      def get_columns(columns, options = {})
+        column_oids = columns.map {|c| Net::SNMP::OID.new(c)}
+        options[:max_repetitions] ||= default_max_repeaters / columns.size
+        results = {}
+        if version == 1
+        else
+          while(result = get_bulk(columns, options))
+            result.varbinds.each do |vb|
+              match = column_oids.select {|c| vb.oid.oid =~ /^#{c.oid}/ }
+            end
+          end
+
+        end
+      end
+
       def error(msg)
         Wrapper.snmp_perror("snmp_error")
         Wrapper.snmp_sess_perror( "snmp_error", @sess.pointer)
@@ -200,24 +218,6 @@ module Net
         raise Net::SNMP::Error.new({:session => self}), msg
       end
       
-#      def dispatcher
-#          fdset = Net::SNMP::Wrapper.get_fd_set
-#          num_fds = FFI::MemoryPointer.new(:int)
-#          tval = Net::SNMP::Wrapper::TimeVal.new
-#          block = FFI::MemoryPointer.new(:int)
-#          block.write_int(0)
-#
-#          # Note..  for some reason, snmp_sess_select_info changes block to be 1.
-#          Net::SNMP::Wrapper.snmp_sess_select_info(@handle, num_fds, fdset, tval.pointer, block )
-#          if num_fds.read_int > 0
-#            zero = Wrapper::TimeVal.new(:tv_sec => 0, :tv_usec => 0)
-#            #Wrapper.print_timeval(zero)
-#
-#            num_ready = Net::SNMP::Wrapper.select(num_fds.read_int, fdset, nil, nil, zero.pointer)
-#            Net::SNMP::Wrapper.snmp_sess_read(@handle, fdset)
-#          end
-#      end
-
 
       private
       def send_pdu(pdu, &block)
@@ -252,8 +252,67 @@ module Net
             end
           end
         end
-
       end
+
+#      def get_entries_cb(pdu, columns, options)
+#        cache = {}
+#        row_index = nil
+#        varbinds = pdu.varbinds.dup
+#        while(varbinds.size > 0)
+#          row = {}
+#          columns.each do |column|
+#            vb = varbinds.shift
+#            if vb.oid.to_s =~ /#{column.to_s}\.(\d+(:?\.\d+)*)/
+#              index = $1
+#            else
+#              last_entry = true
+#              next
+#            end
+#            row_index = index unless row_index
+#            index_cmp = Net::SNMP.oid_lex_cmp(index, row_index)
+#            if(index_cmp == 0)
+#            end
+#          end
+#        end
+#      end
+
+
+
+
+      def trap(options = {})
+        pdu = PDU.new(Constants::SNMP_MSG_TRAP)
+        options[:enterprise] ||= '1.3.6.1.4.1.3.1.1'  # uh, just send netsnmp enterprise i guess
+        pdu.enterprise = OID.new(options[:enterprise])
+        pdu.trap_type = options[:trap_type] || 1  # need to check all these defaults
+        pdu.specific_type = options[:specific_type] || 0
+        pdu.time = 1    # put what here?
+        send_pdu(pdu)
+      end
+
+
+      def trap_v2(options = {})
+        pdu = PDU.new(Constants::SNMP_MSG_TRAP2)
+        build_trap_pdu(options)
+        send_pdu(pdu)
+      end
+
+      def inform(options = {}, &block)
+        pdu = PDU.new(Constants::SNMP_MSG_INFORM)
+        build_trap_pdu(options)
+        send_pdu(pdu, &block)
+      end
+
+      def build_trap_pdu(pdu, options = {})
+        pdu.add_varbind(:oid => OID.new('sysUpTime'), :type => Constants::ASN_TIMETICKS, :value => 0)
+        pdu.add_varbind(:oid => OID.new('snmpTrapOID'), :type => Constants::ASN_OBJECT_ID, :value => options[:oid])
+        if options[:varbinds]
+          options[:varbinds].each do |vb|
+            pdu.add_varbind(vb)
+          end
+        end
+      end
+
+
     end
   end
 end

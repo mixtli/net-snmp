@@ -21,6 +21,9 @@ module Net
 
       end
 
+      def size
+        @length_pointer.read_int
+      end
       def oid
         @oid
       end
