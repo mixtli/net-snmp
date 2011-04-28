@@ -15,14 +15,14 @@ module Net
       class << self
         attr_accessor :sessions, :lock
         def open(options = {})
-          puts "building session"
+          #puts "building session"
           session = new(options)
           @lock.synchronize {
             @sessions[session.sessid] = session
           }
-          puts "done building"
+          #puts "done building"
           if block_given?
-            puts "calling block"
+            #puts "calling block"
             yield session
 
           end
@@ -31,7 +31,7 @@ module Net
       end
 
       def initialize(options = {})
-        puts "in initialize"
+        #puts "in initialize"
         @requests = {}
         @peername = options[:peername] || 'localhost'
         @community = options[:community] || "public"
@@ -64,7 +64,6 @@ module Net
         if options[:retries]
           @sess.retries = options[:retries]
         end
-        puts "1"
         if @sess.version == Constants::SNMP_VERSION_3
           @sess.securityLevel = options[:security_level] || Constants::SNMP_SEC_LEVEL_NOAUTH
 
@@ -97,24 +96,19 @@ module Net
             Wrapper.snmp_perror("netsnmp")
           end
         end
-        puts "2"
         # General callback just takes the pdu, calls the session callback if any, then the request specific callback.
         @sess.callback = lambda do |operation, session, reqid, pdu_ptr, magic|
           #puts "callback is #{callback.inspect}"
           #callback.call(operation, reqid, pdu, magic) if callback
 
-          puts "in main callback"
           if @requests[reqid]
-            puts "got request"
             pdu = Net::SNMP::PDU.new(pdu_ptr)
             @requests[reqid].call(pdu)
             @requests.delete(reqid)
           end
           0
         end
-        puts "3"
         @struct = Wrapper.snmp_sess_open(@sess.pointer)
-        puts "4"
         #@handle = Wrapper.snmp_sess_open(@sess.pointer)
         #@struct = Wrapper.snmp_sess_session(@handle)
       end
@@ -149,7 +143,6 @@ module Net
         pdu = Net::SNMP::PDU.new(Constants::SNMP_MSG_GETBULK)
         oidlist = [oidlist] unless oidlist.kind_of?(Array)
         oidlist.each do |oid|
-          puts "adding #{oid.inspect}"
           pdu.add_varbind(:oid => oid)
         end
         pdu.non_repeaters = options[:non_repeaters] || 0
@@ -186,7 +179,6 @@ module Net
         results = []
 
         first_result = get_next(column_names)
-        puts "got first result #{first_result.inspect}"
         oidlist = []
         good_column_names = []
         row = {}
@@ -203,7 +195,6 @@ module Net
 
         catch :break_main_loop do
           while(result = get_next(oidlist))
-            puts "got result #{result.inspect}"
             oidlist = []
             row = {}
             result.varbinds.each_with_index do |vb, idx|
@@ -258,24 +249,24 @@ module Net
         pdu.specific_type = options[:specific_type] || 0
         pdu.time = 1    # put what here?
         send_pdu(pdu)
+        true
       end
 
 
       def trap_v2(options = {})
         pdu = PDU.new(Constants::SNMP_MSG_TRAP2)
-        build_trap_pdu(options)
+        build_trap_pdu(pdu, options)
         send_pdu(pdu)
       end
 
       def inform(options = {}, &block)
         pdu = PDU.new(Constants::SNMP_MSG_INFORM)
-        build_trap_pdu(options)
+        build_trap_pdu(pdu, options)
         send_pdu(pdu, &block)
       end
 
       def poll(timeout = nil)
         
-          puts "IN POLL"
           fdset = Net::SNMP::Wrapper.get_fd_set
           num_fds = FFI::MemoryPointer.new(:int)
           tv_sec = timeout ? timeout.round : 0
@@ -290,7 +281,6 @@ module Net
           end
           #puts "calling snmp_select_info"
           num = Net::SNMP::Wrapper.snmp_sess_select_info(@struct, num_fds, fdset, tval.pointer, block )
-          puts "done snmp_select_info. #{num}"
           num_ready = 0
           #puts "block = #{block.read_int}"
 
@@ -302,9 +292,7 @@ module Net
           #puts "tv = #{tv.inspect}"
           #puts "calling select with #{num_fds.read_int}"
           #num_ready = RubyWrapper.rb_thread_select(num_fds.read_int, fdset, nil, nil, tv)
-          puts "calling select"
           num_ready = Net::SNMP::Wrapper.select(num_fds.read_int, fdset, nil, nil, tv)
-          puts "done select"
           #puts "done select.  num_ready = #{num_ready}"
           if num_ready > 0
             Net::SNMP::Wrapper.snmp_sess_read(@struct, fdset)
@@ -342,14 +330,22 @@ module Net
             response_ptr = FFI::MemoryPointer.new(:pointer)
             #Net::SNMP::Wrapper.print_session(@struct)
             #Net::SNMP::Wrapper.print_pdu(pdu.struct)
-            status = Net::SNMP::Wrapper.snmp_sess_synch_response(@struct, pdu.pointer, response_ptr)
-            puts "called snmp_sync_response"
+            #if pdu.command == Net::SNMP::Constants::SNMP_MSG_TRAP
+            #  status = Net::SNMP::Wrapper.snmp_sess_send(@struct, pdu.pointer) == 1 ? 0 : 1
+            #else
+              status = Net::SNMP::Wrapper.snmp_sess_synch_response(@struct, pdu.pointer, response_ptr)
+            #end
             #pdu.free  #causing segfaults
             if status != 0
               error("snmp_get failed #{status}")
             else
               #Net::SNMP::Wrapper.print_pdu(Net::SNMP::Wrapper::SnmpPdu.new(response_ptr.read_pointer))
-              Net::SNMP::PDU.new(response_ptr.read_pointer)
+              #if pdu.command == Net::SNMP::Constants::SNMP_MSG_TRAP
+                Net::SNMP::PDU.new(response_ptr.read_pointer)
+              #else
+              #  1
+              #end
+              
             end
           end
         end

@@ -46,7 +46,7 @@ class Net::SNMP::Dispatcher
 
 
     def poll(timeout = nil)
-      puts "Dispatcher.poll #{Net::SNMP::Session.sessions.size}"
+      #puts "Dispatcher.poll #{Net::SNMP::Session.sessions.size}"
       total = 0
       t = timeout
       t = nil if t == false
@@ -54,7 +54,7 @@ class Net::SNMP::Dispatcher
         loop do
           Net::SNMP::Session.lock.synchronize {
             Net::SNMP::Session.sessions.each do |k, sess|
-              puts "polling session"
+              #puts "polling session"
               total += sess.poll(t)
             end
           }
@@ -62,7 +62,7 @@ class Net::SNMP::Dispatcher
           throw :got_data unless timeout == false
         end
       end
-      puts "Done Dispatcher.poll"
+      #puts "Done Dispatcher.poll"
       total
     end
 
@@ -81,9 +81,9 @@ class Net::SNMP::Dispatcher
       sleep_time = options[:sleep] || 0.1
       Thread.new do
         loop do
-          puts "polling"
+          #puts "polling"
           num_ready = poll(timeout)
-          puts "num_ready = #{num_ready}"
+          #puts "num_ready = #{num_ready}"
           if num_ready == 0
             sleep(sleep_time) if sleep_time
           end

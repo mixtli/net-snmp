@@ -39,7 +39,7 @@ module Net
         @struct.errindex
       end
       def enterprise=(e_oid)
-        @enterprise = e_iod
+        @enterprise = e_oid
         @struct.enterprise = e_oid.pointer
         @struct.enterprise_length = e_oid.size
       end
@@ -92,8 +92,8 @@ module Net
           value = value.pointer
         end
 
+        #oid = options[:oid].kind_of?(Net::SNMP::OID) ? options[:oid] : Net::SNMP::OID.new(options[:oid])
         oid = Net::SNMP::OID.new(options[:oid])
-
         var_ptr = Wrapper.snmp_pdu_add_variable(@struct.pointer, oid.pointer, oid.length_pointer.read_int, options[:type], value, value_len)
         varbind = Varbind.new(var_ptr)
         #Wrapper.print_varbind(varbind.struct)
