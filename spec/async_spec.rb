@@ -80,7 +80,7 @@ describe "async" do
 #
     it "get should work" do
       did_callback = false
-      Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :version => 3, :username => 'MD5User',:security_level => Net::SNMP::Constants::SNMP_SEC_LEVEL_AUTHNOPRIV, :auth_protocol => :md5, :password => 'The Net-SNMP Demo Password') do |sess|
+      sess = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :version => 3, :username => 'MD5User',:security_level => Net::SNMP::Constants::SNMP_SEC_LEVEL_AUTHNOPRIV, :auth_protocol => :md5, :password => 'The Net-SNMP Demo Password') do |sess|
         sess.get(["sysDescr.0", "sysContact.0"]) do |result|
           did_callback = true
           result.varbinds[0].value.should eql("test.net-snmp.org")
@@ -88,13 +88,14 @@ describe "async" do
         end
       end
       Net::SNMP::Dispatcher.poll(false)
+      sess.close
       did_callback.should be(true)
     end
 
     it "getnext should work" do
       did_callback = false
 
-      Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :version => 3, :username => 'MD5User',:security_level => Net::SNMP::Constants::SNMP_SEC_LEVEL_AUTHNOPRIV, :auth_protocol => :md5, :password => 'The Net-SNMP Demo Password') do |sess|
+      sess = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :version => 3, :username => 'MD5User',:security_level => Net::SNMP::Constants::SNMP_SEC_LEVEL_AUTHNOPRIV, :auth_protocol => :md5, :password => 'The Net-SNMP Demo Password') do |sess|
         sess.get_next(["sysDescr", "sysContact"]) do |result|
           did_callback = true
           result.varbinds[0].value.should eql("test.net-snmp.org")
@@ -102,6 +103,7 @@ describe "async" do
         end
       end
       Net::SNMP::Dispatcher.poll(false)
+      sess.close
       did_callback.should be(true)
     end
   end

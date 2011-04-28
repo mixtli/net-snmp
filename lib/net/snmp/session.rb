@@ -24,8 +24,7 @@ module Net
           if block_given?
             puts "calling block"
             yield session
-            #@sessions.delete(session.sessid)
-            #Wrapper.snmp_sess_close(session.struct)
+
           end
           session
         end
@@ -121,6 +120,12 @@ module Net
       end
 
 
+      def close
+        Net::SNMP::Session.lock.synchronize {
+          Wrapper.snmp_sess_close(@struct)
+          Net::SNMP::Session.sessions.delete(self.sessid)
+        }
+      end
 
       def get(oidlist, options = {}, &block)
         pdu = Net::SNMP::PDU.new(Constants::SNMP_MSG_GET)
