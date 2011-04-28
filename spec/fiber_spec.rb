@@ -13,6 +13,7 @@ describe "in fiber" do
 
 
   it "get should work in a fiber with synchronous calling style" do
+    #pending
     wrap_fiber do
         session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic')
         result = session.get("sysDescr.0")
@@ -22,6 +23,7 @@ describe "in fiber" do
   end
 
   it "getnext" do
+    #pending
     wrap_fiber do
       Net::SNMP::Session.open(:peername => "test.net-snmp.org", :community => "demopublic" ) do |sess|
         result = sess.get_next(["sysUpTimeInstance.0"])
@@ -32,6 +34,7 @@ describe "in fiber" do
   end
 
   it "should get using snmpv3" do
+    #pending
     wrap_fiber do
       Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :version => 3, :username => 'MD5User', :security_level => Net::SNMP::Constants::SNMP_SEC_LEVEL_AUTHNOPRIV, :auth_protocol => :md5, :password => 'The Net-SNMP Demo Password') do |sess|
         result = sess.get(["sysDescr.0"])

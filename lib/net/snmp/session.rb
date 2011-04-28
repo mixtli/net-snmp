@@ -1,29 +1,43 @@
+require 'thread'
 require 'forwardable'
 require 'pp'
 module Net
   module SNMP
     class Session
       extend Forwardable
-      attr_accessor :struct, :callback
+      attr_accessor :struct, :callback, :requests, :peername, :community
       attr_reader :version
       def_delegator :@struct, :pointer
       #@sessions = []
-      @requests = {}
+      @lock = Mutex.new
+      @sessions = {}
+
       class << self
-        attr_accessor :requests
+        attr_accessor :sessions, :lock
         def open(options = {})
+          puts "building session"
           session = new(options)
+          @lock.synchronize {
+            @sessions[session.sessid] = session
+          }
+          puts "done building"
           if block_given?
+            puts "calling block"
             yield session
+            #@sessions.delete(session.sessid)
+            #Wrapper.snmp_sess_close(session.struct)
           end
           session
         end
       end
 
       def initialize(options = {})
-        options[:peername] ||= 'localhost'
-        options[:community] ||= "public"
-        options[:community_len] = options[:community].length
+        puts "in initialize"
+        @requests = {}
+        @peername = options[:peername] || 'localhost'
+        @community = options[:community] || "public"
+        options[:community_len] = @community.length
+        @version = options[:version] || 1
         options[:version] ||= Constants::SNMP_VERSION_1
         @callback = options[:callback]
         @version = options[:version] || 1
@@ -31,9 +45,9 @@ module Net
         @sess = Wrapper::SnmpSession.new(nil)
         Wrapper.snmp_sess_init(@sess.pointer)
         #options.each_pair {|k,v| ptr.send("#{k}=", v)}
-        @sess.community = FFI::MemoryPointer.from_string(options[:community])
-        @sess.community_len = options[:community].length
-        @sess.peername = FFI::MemoryPointer.from_string(options[:peername])
+        @sess.community = FFI::MemoryPointer.from_string(@community)
+        @sess.community_len = @community.length
+        @sess.peername = FFI::MemoryPointer.from_string(@peername)
         @sess.version = case options[:version].to_s
         when '1'
           Constants::SNMP_VERSION_1
@@ -51,7 +65,7 @@ module Net
         if options[:retries]
           @sess.retries = options[:retries]
         end
-
+        puts "1"
         if @sess.version == Constants::SNMP_VERSION_3
           @sess.securityLevel = options[:security_level] || Constants::SNMP_SEC_LEVEL_NOAUTH
 
@@ -84,22 +98,24 @@ module Net
             Wrapper.snmp_perror("netsnmp")
           end
         end
-        
+        puts "2"
         # General callback just takes the pdu, calls the session callback if any, then the request specific callback.
         @sess.callback = lambda do |operation, session, reqid, pdu_ptr, magic|
-          callback.call(operation, reqid, pdu, magic) if callback
+          #puts "callback is #{callback.inspect}"
+          #callback.call(operation, reqid, pdu, magic) if callback
 
           puts "in main callback"
-          if self.class.requests[reqid]
+          if @requests[reqid]
             puts "got request"
             pdu = Net::SNMP::PDU.new(pdu_ptr)
-            self.class.requests[reqid].call(pdu)
-            self.class.requests.delete(reqid)
+            @requests[reqid].call(pdu)
+            @requests.delete(reqid)
           end
           0
         end
-
-        @struct = Wrapper.snmp_open(@sess.pointer)
+        puts "3"
+        @struct = Wrapper.snmp_sess_open(@sess.pointer)
+        puts "4"
         #@handle = Wrapper.snmp_sess_open(@sess.pointer)
         #@struct = Wrapper.snmp_sess_session(@handle)
       end
@@ -146,6 +162,14 @@ module Net
         send_pdu(pdu, &block)
       end
 
+      def method_missing(m, *args)
+        if @struct.respond_to?(m)
+          @struct.send(m, *args)
+        else
+          super
+        end
+      end
+
 
       # XXX This needs work.  Need to use getbulk for speed, guess maxrepeaters, etc..
       # Also need to figure out how we can tell column names from something like ifTable
@@ -157,6 +181,7 @@ module Net
         results = []
 
         first_result = get_next(column_names)
+        puts "got first result #{first_result.inspect}"
         oidlist = []
         good_column_names = []
         row = {}
@@ -173,7 +198,7 @@ module Net
 
         catch :break_main_loop do
           while(result = get_next(oidlist))
-            #puts "got result #{result.inspect}"
+            puts "got result #{result.inspect}"
             oidlist = []
             row = {}
             result.varbinds.each_with_index do |vb, idx|
@@ -212,12 +237,82 @@ module Net
       end
 
       def error(msg)
-        Wrapper.snmp_perror("snmp_error")
-        Wrapper.snmp_sess_perror( "snmp_error", @sess.pointer)
+        Wrapper.snmp_perror(msg)
+        Wrapper.snmp_sess_perror(msg, @sess.pointer)
+        
         #Wrapper.print_session(self.struct)
         raise Net::SNMP::Error.new({:session => self}), msg
       end
       
+
+      def trap(options = {})
+        pdu = PDU.new(Constants::SNMP_MSG_TRAP)
+        options[:enterprise] ||= '1.3.6.1.4.1.3.1.1'  # uh, just send netsnmp enterprise i guess
+        pdu.enterprise = OID.new(options[:enterprise])
+        pdu.trap_type = options[:trap_type] || 1  # need to check all these defaults
+        pdu.specific_type = options[:specific_type] || 0
+        pdu.time = 1    # put what here?
+        send_pdu(pdu)
+      end
+
+
+      def trap_v2(options = {})
+        pdu = PDU.new(Constants::SNMP_MSG_TRAP2)
+        build_trap_pdu(options)
+        send_pdu(pdu)
+      end
+
+      def inform(options = {}, &block)
+        pdu = PDU.new(Constants::SNMP_MSG_INFORM)
+        build_trap_pdu(options)
+        send_pdu(pdu, &block)
+      end
+
+      def poll(timeout = nil)
+        
+          puts "IN POLL"
+          fdset = Net::SNMP::Wrapper.get_fd_set
+          num_fds = FFI::MemoryPointer.new(:int)
+          tv_sec = timeout ? timeout.round : 0
+          tv_usec = timeout ? (timeout - timeout.round) * 1000000 : 0
+          tval = Net::SNMP::Wrapper::TimeVal.new(:tv_sec => tv_sec, :tv_usec => tv_usec)
+          block = FFI::MemoryPointer.new(:int)
+
+          if timeout.nil?
+            block.write_int(0)
+          else
+            block.write_int(1)
+          end
+          #puts "calling snmp_select_info"
+          num = Net::SNMP::Wrapper.snmp_sess_select_info(@struct, num_fds, fdset, tval.pointer, block )
+          puts "done snmp_select_info. #{num}"
+          num_ready = 0
+          #puts "block = #{block.read_int}"
+
+          #puts "numready = #{num_fds.read_int}"
+          #puts "tv = #{tval[:tv_sec]} #{tval[:tv_usec]}"
+          #puts "timeout = #{timeout}"
+          tv = (timeout == false ? nil : tval)
+          #puts "calling select"
+          #puts "tv = #{tv.inspect}"
+          #puts "calling select with #{num_fds.read_int}"
+          #num_ready = RubyWrapper.rb_thread_select(num_fds.read_int, fdset, nil, nil, tv)
+          puts "calling select"
+          num_ready = Net::SNMP::Wrapper.select(num_fds.read_int, fdset, nil, nil, tv)
+          puts "done select"
+          #puts "done select.  num_ready = #{num_ready}"
+          if num_ready > 0
+            Net::SNMP::Wrapper.snmp_sess_read(@struct, fdset)
+          elsif num_ready == 0
+            # timeout.  do something here?  or just return 0?
+          elsif num_ready == -1
+            # error.  check snmp_error?
+          else
+            # uhhh
+          end
+          #puts "done snmp_read"
+          num_ready
+      end
 
       private
       def send_pdu(pdu, &block)
@@ -232,18 +327,19 @@ module Net
           Fiber.yield
         else
           if block
-            self.class.requests[pdu.reqid] = block
-            if (status = Net::SNMP::Wrapper.snmp_send(@struct, pdu.pointer)) == 0
+            @requests[pdu.reqid] = block
+            if (status = Net::SNMP::Wrapper.snmp_sess_send(@struct, pdu.pointer)) == 0
               error("snmp_get async failed")
             end
-            pdu.free
+            #pdu.free
             nil
           else
             response_ptr = FFI::MemoryPointer.new(:pointer)
             #Net::SNMP::Wrapper.print_session(@struct)
             #Net::SNMP::Wrapper.print_pdu(pdu.struct)
-            status = Wrapper.snmp_synch_response(@struct, pdu.pointer, response_ptr)
-            #pdu.free
+            status = Net::SNMP::Wrapper.snmp_sess_synch_response(@struct, pdu.pointer, response_ptr)
+            puts "called snmp_sync_response"
+            #pdu.free  #causing segfaults
             if status != 0
               error("snmp_get failed #{status}")
             else
@@ -279,28 +375,6 @@ module Net
 
 
 
-      def trap(options = {})
-        pdu = PDU.new(Constants::SNMP_MSG_TRAP)
-        options[:enterprise] ||= '1.3.6.1.4.1.3.1.1'  # uh, just send netsnmp enterprise i guess
-        pdu.enterprise = OID.new(options[:enterprise])
-        pdu.trap_type = options[:trap_type] || 1  # need to check all these defaults
-        pdu.specific_type = options[:specific_type] || 0
-        pdu.time = 1    # put what here?
-        send_pdu(pdu)
-      end
-
-
-      def trap_v2(options = {})
-        pdu = PDU.new(Constants::SNMP_MSG_TRAP2)
-        build_trap_pdu(options)
-        send_pdu(pdu)
-      end
-
-      def inform(options = {}, &block)
-        pdu = PDU.new(Constants::SNMP_MSG_INFORM)
-        build_trap_pdu(options)
-        send_pdu(pdu, &block)
-      end
 
       def build_trap_pdu(pdu, options = {})
         pdu.add_varbind(:oid => OID.new('sysUpTime'), :type => Constants::ASN_TIMETICKS, :value => 0)

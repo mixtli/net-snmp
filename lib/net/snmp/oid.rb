@@ -16,7 +16,7 @@ module Net
           if Wrapper.get_node(@oid, @pointer, @length_pointer) == 0
             Wrapper.snmp_perror(@oid)
           end
-          @oid = c_oid
+          @oid = to_s
         end
 
       end
@@ -32,7 +32,7 @@ module Net
         @oid
       end
 
-      def c_oid
+      def to_s
         @pointer.read_array_of_long(length_pointer.read_int).join(".")
       end
 

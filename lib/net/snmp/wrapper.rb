@@ -278,7 +278,7 @@ module Wrapper
   attach_function :snmp_get_do_debugging, [  ], :int
   attach_function :snmp_error, [ :pointer, :pointer, :pointer, :pointer ], :void
   attach_function :snmp_sess_init, [ :pointer ], :void
-  attach_function :snmp_sess_open, [ :pointer ], :pointer
+  attach_function :snmp_sess_open, [ :pointer ], SnmpSession.typed_pointer
   attach_function :snmp_sess_pointer, [ :pointer ], :pointer
   attach_function :snmp_sess_session, [ :pointer ], SnmpSession.typed_pointer
   attach_function :snmp_sess_transport, [ :pointer ], :pointer
@@ -340,11 +340,12 @@ module Wrapper
   attach_function :snmp_set_detail, [ :string ], :void
   
   attach_function :snmp_select_info, [:pointer, :pointer, :pointer, :pointer], :int
-  attach_function :select, [:int, :pointer, :pointer, :pointer, :pointer], :int
   attach_function :snmp_read, [:pointer], :void
   attach_function :generate_Ku, [:pointer, :int, :string, :int, :pointer, :pointer], :int
 
-  
+
+  # Standard IO functions
+  attach_function :select, [:int, :pointer, :pointer, :pointer, :pointer], :int
   # MIB functions
   attach_function :init_mib, [], :void
   attach_function :read_all_mibs, [], :void
@@ -355,7 +356,6 @@ module Wrapper
 
   attach_function :get_tree_head, [], Tree.typed_pointer
   attach_function :get_tree, [:pointer, :int, :pointer], Tree.typed_pointer
-
   #attach_function :send_easy_trap, [:int, :int], :void
   #attach_function :send_trap_vars, [:int, :int, :pointer], :void
   #attach_function :send_v2trap, [:pointer], :void
@@ -368,3 +368,10 @@ module Wrapper
 end
 end
 end
+
+#module RubyWrapper
+#  extend NiceFFI::Library
+#  #ffi_lib "libruby"
+#  ffi_lib "/Users/rmcclain/.rvm/rubies/ruby-1.9.2-preview3/lib/libruby.dylib"
+#  attach_function :rb_thread_select, [:int, :pointer, :pointer, :pointer, :pointer], :int
+#end

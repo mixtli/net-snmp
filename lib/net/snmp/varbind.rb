@@ -26,7 +26,7 @@ module Net
         when Constants::ASN_OCTET_STR
           struct.val[:string].read_string(struct.val_len)
         when Constants::ASN_INTEGER, Constants::ASN_COUNTER, Constants::ASN_GAUGE
-          struct.val[:integer].read_int
+          struct.val[:integer].read_long
         when Constants::ASN_IPADDRESS
           struct.val[:objid].read_string(struct.val_len).unpack('CCCC').join(".")
         end

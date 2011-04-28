@@ -1,9 +1,9 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
+require 'eventmachine'
 
 describe "em" do
   
   it "should work in event_machine" do
-    require 'eventmachine'
     did_callback = false
     EM.run do
       Net::SNMP::Dispatcher.em_loop

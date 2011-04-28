@@ -10,6 +10,14 @@ describe "synchronous calls" do
       end
     end
 
+    it "multiple calls within session should succeed" do
+      Net::SNMP::Session.open(:peername => "test.net-snmp.org", :community => "demopublic" ) do |sess|
+        result = sess.get("sysDescr.0")
+        result.varbinds.first.value.should eql("test.net-snmp.org")
+        second = sess.get("sysName.0")
+        second.varbinds.first.value.should eql("test.net-snmp.org")
+      end
+    end
     it "get should succeed with multiple oids" do
       Net::SNMP::Session.open(:peername => "test.net-snmp.org", :community => 'demopublic' ) do |sess|
         result = sess.get(["sysDescr.0", "sysName.0"])
@@ -58,6 +66,7 @@ describe "synchronous calls" do
     end
 
     it "get_table should work with multiple columns" do
+      #pending
       session = Net::SNMP::Session.open(:peername => "localhost", :version => '1')
       table = session.get_table("ifTable", :columns => ["ifIndex", "ifDescr", "ifName"])
       table[0]['ifName'].should eql("lo0")
@@ -79,17 +88,18 @@ describe "synchronous calls" do
 
   context "version 3" do
     it "should get using snmpv3" do
+      #pending
       Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :version => 3, :username => 'MD5User', :security_level => Net::SNMP::Constants::SNMP_SEC_LEVEL_AUTHNOPRIV, :auth_protocol => :md5, :password => 'The Net-SNMP Demo Password') do |sess|
         result = sess.get("sysDescr.0")
         result.varbinds.first.value.should eql('test.net-snmp.org')
       end
     end
-    #it "should set using snmpv3" do
-    #  pending
-    #  Net::SNMP::Session.open(:peername => '127.0.0.1', :version => 3, :username => 'myuser', :authprotocol => :sha1, :authkey => '0x1234', :privprotocol => :des, :privkey => '0x25252') do |sess|
-    #    result = sess.set([["sysDescr.0", Net::SNMP::Constants::ASN_OCTET_STR, 'yomama']])
-    #    result.varbinds.first.value.should match(/Darwin/)
-    #  end
-    #end
+    it "should set using snmpv3" do
+      pending
+      Net::SNMP::Session.open(:peername => '127.0.0.1', :version => 3, :username => 'myuser', :auth_protocol => :sha1, :password => '0x1234') do |sess|
+        result = sess.set([["sysDescr.0", Net::SNMP::Constants::ASN_OCTET_STR, 'yomama']])
+        result.varbinds.first.value.should match(/Darwin/)
+      end
+    end
   end
 end
