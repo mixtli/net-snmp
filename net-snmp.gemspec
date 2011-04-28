@@ -1,11 +1,11 @@
 # -*- encoding: utf-8 -*-
 lib = File.expand_path("../lib", __FILE__)
 $:.unshift lib
-#require 'net/snmp/version'
+require 'net/snmp/version'
 
 Gem::Specification.new do |s|
   s.name        = "net-snmp"
-  s.version     = '0.1.5'
+  s.version     = Net::SNMP::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Ron McClain"]
   s.email       = ["mixtli@github.com"]

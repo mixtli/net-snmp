@@ -42,10 +42,7 @@ functions are defined in Net::SNMP::Wrapper.  You can call them like so:
   Net::SNMP::Wrapper.snmp_perror("some_error")
 
 == NOTES
-  For now, you have to free the pdu when you're done with it in sync calls or you'll leak memory.
-It's not necessary in async calls because the library automatically frees the pdu after the callback fires.
-This is where destructors would be handy.
-
+You must call Session.close when you're done with a session to avoid leaking memory
 
 == EXAMPLES
 
@@ -55,23 +52,28 @@ A simple synchronous SNMP-GET
   session = Net::SNMP::Session.open(:peername => "test.net-snmp.org", :community => "demopublic" )
   result = session.get("sysDescr.0")
   puts result.varbinds.first.value
-  result.free    # you have to manually free the memory in sync calls for now.   
+  session.close
 
 An asynchronous SNMP-GET
-    Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |session|
+    session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |session|
       session.get(["sysDescr.0", "sysContact.0"]) do |result|
         puts result.varbinds[0].value
       end
     end
     Net::SNMP::Dispatcher.poll(false)  #Setting timeout to false causes dispatcher to block until data is ready
+    session.close
 
 Running the dispatcher from eventmachine
     EM.run do
       Net::SNMP::Dispatcher.em_loop
-      Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |session|
+      session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |session|
         session.get("sysDescr.0") do |result|
           puts result.varbinds[0].value
         end
+      end
+      EM.add_timer(2) do
+        session.close
+        EM.stop
       end
     end
 
@@ -82,6 +84,7 @@ Using synchronous style with eventmachine in ruby 1.9
         session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic')
         result = session.get("sysDescr.0")
         puts result.varbinds[0].value
+        session.close
         EM.stop
       }.resume
   end
