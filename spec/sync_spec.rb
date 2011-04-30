@@ -74,10 +74,18 @@ describe "synchronous calls" do
     end
 
     it "get_table should work" do
+      pending "not yet implemented"
       session = Net::SNMP::Session.open(:peername => "localhost", :version => '1')
-      table = session.get_table("ifEntry")
+      table = session.get_table("ifTable", :columns => ['ifIndex', 'ifDescr'])
       table[0]['ifIndex'].should eql(1)
       table[1]['ifIndex'].should eql(2)
+    end
+
+    it "walk should work" do
+      pending "not yet implemented"
+      session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :version => 1)
+      results = session.walk("system")
+      results['1.3.6.1.2.1.1.1.0'].should match(/test.net-snmp.org/)
     end
 
   end

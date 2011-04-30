@@ -2,12 +2,15 @@ module Net
   module SNMP
     class OID
       attr_reader :oid, :pointer, :length_pointer
+
+      def from_pointer(ptr, len)
+        
+      end
       def initialize(oid)
         @oid = oid
         @pointer = FFI::MemoryPointer.new(:ulong, Constants::MAX_OID_LEN)
         @length_pointer = FFI::MemoryPointer.new(:size_t)
         @length_pointer.write_int(Constants::MAX_OID_LEN)
-
         if @oid =~ /^[\d\.]*$/
           if Wrapper.read_objid(@oid, @pointer, @length_pointer) == 0
             Wrapper.snmp_perror(@oid)
@@ -22,8 +25,9 @@ module Net
       end
 
       def size
-        @length_pointer.read_int
+        @length_pointer.read_int * 8 # XXX 8 = sizeof(oid) on my system.  Not sure if it's different on others
       end
+
       def oid
         @oid
       end

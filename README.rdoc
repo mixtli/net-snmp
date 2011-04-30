@@ -9,6 +9,7 @@ It provides classes for sessions, pdus, varbinds, and more.
 
 * Supports SNMP versions 1, 2c, and 3
 * Supports both synchronous and asynchronous calls
+* Supports sending of snmpv1 traps and snmpv2 traps/informs using TrapSession
 * Integrates well with eventmachine, or can be used standalone.
 * In Ruby 1.9, uses fibers behind the scenes to emulate synchronous calls asynchronously
 
@@ -44,31 +45,48 @@ functions are defined in Net::SNMP::Wrapper.  You can call them like so:
 == NOTES
 You must call Session.close when you're done with a session to avoid leaking memory
 
-== EXAMPLES
+== ERROR HANDLING
+    In the synchronous versions, all session methods raise Net::SNMP:Error on any error.  Timeouts raise Net::SNMP::TimeoutError.
+    In the asynchronous versions, the first argument to your callback will be the return status.  Possible values include :success, :timeout, and :send_error.
+    If you need the underlying net-snmp session errors, you can call session.errno, session.snmp_err, and session.error_message.
+    
 
+== EXAMPLES
 
 A simple synchronous SNMP-GET
 
   session = Net::SNMP::Session.open(:peername => "test.net-snmp.org", :community => "demopublic" )
-  result = session.get("sysDescr.0")
-  puts result.varbinds.first.value
+  begin
+    pdu = session.get("sysDescr.0")
+    puts pdu.varbinds.first.value
+  rescue Net::SNMP::Error => e
+    puts e.message
+  end
   session.close
 
 An asynchronous SNMP-GET
     session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |session|
-      session.get(["sysDescr.0", "sysContact.0"]) do |result|
-        puts result.varbinds[0].value
+      session.get(["sysDescr.0", "sysContact.0"]) do |status, pdu|
+        if status == :success
+          puts pdu.varbinds[0].value
+        else
+          puts "something went wrong.  status is #{status}"
+        end
       end
     end
-    Net::SNMP::Dispatcher.poll(false)  #Setting timeout to false causes dispatcher to block until data is ready
+    Net::SNMP::Dispatcher.select(false)  #Setting timeout to false causes dispatcher to block until data is ready
     session.close
 
 Running the dispatcher from eventmachine
     EM.run do
       Net::SNMP::Dispatcher.em_loop
       session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |session|
-        session.get("sysDescr.0") do |result|
-          puts result.varbinds[0].value
+        session.get("sysDescr.0") do |status, pdu|
+          if status == :success
+            puts pdu.varbinds[0].value
+          else
+            puts "something went wrong.  status is #{status}"
+          end
         end
       end
       EM.add_timer(2) do
@@ -82,8 +100,12 @@ Using synchronous style with eventmachine in ruby 1.9
       Net::SNMP::Dispatcher.fiber_loop
       Fiber.new {
         session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic')
-        result = session.get("sysDescr.0")
-        puts result.varbinds[0].value
+        begin
+          pdu = session.get("sysDescr.0")
+          puts pdu.varbinds[0].value
+        rescue Net::SNMP::Error => e
+          puts e.message
+        end
         session.close
         EM.stop
       }.resume
@@ -105,14 +127,15 @@ You can also explicitly add MIBs using the MIB api.  For example:
   Net::SNMP::MIB.add_mibdir("/usr/local/share/mibs")
   Net::SNMP::MIB.read_mib("RFC1213-MIB.txt")
 
-Having the appropriate MIBs loaded will allow you to pass names instead of numeric oids to net-snmp methods.  To translate a single oid,
-you can call Net::SNMP.get_oid("sysDescr.0").  For more complex MIB parsing needs, see smi-ffi[http://github.com/mixtli/smi-ffi]
+Having the appropriate MIBs loaded will allow you to pass names instead of numeric oids to net-snmp methods.  You can also pass
+Net::SNMP::OID objects.  For example
 
+    oid = Net::SNMP::OID.new('sysDescr.0') # or Net::SNMP::OID.new("1.3.6.1.2.1.1.1.0")
+    puts oid.to_s  --> '1.3.6.1.2.1.1.1.0'
+    puts oid.label --> 'sysDescr.0'
+    pdu = session.get([oid])
 
-== BUGS
-Right now, snmpv3 is only working  using synchronous API.   Asynchronous calls seem to miss packets.
-I have no idea why it would be different for v3 vs v1/v2.  If anyone knows, tell me ;)
-
+For more complex MIB parsing needs, see smi-ffi[http://github.com/mixtli/smi-ffi]
 
 == CAVEATS/DISCLAIMER
 
@@ -128,13 +151,11 @@ break this gem.  Please let me know if you find bugs or missing features.  Or be
 
 
 == TODO
-
-* Better error handling.
+* Implement walk and get_table convenience methods.
 * SNMPv3 support needs testing for various security models
 * Better documentation
 * More tests
-* Cleanup cruft and unused code
-* Implement SNMP traps/informs?
+
 
 == Note on Patches/Pull Requests
  

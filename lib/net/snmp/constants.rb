@@ -2,10 +2,18 @@ module Net
   module SNMP
     module Constants
       MAX_OID_LEN = 128
+
+      # Return values of various send functions
+      STAT_SUCCESS        = 0
+      STAT_ERROR          = 1
+      STAT_TIMEOUT        = 2
+
+      # SNMP versions
       SNMP_VERSION_1 = 0
       SNMP_VERSION_2c = 1
       SNMP_VERSION_3 = 3
 
+      # PDU variable types
       ASN_BOOLEAN         = 0x01
       ASN_INTEGER         = 0x02
       ASN_BIT_STR         = 0x03
@@ -34,13 +42,17 @@ module Net
       ASN_UNSIGNED    = (ASN_APPLICATION | 2)   # RFC 1902 - same as GAUGE
       ASN_TIMETICKS   = (ASN_APPLICATION | 3)
       ASN_OPAQUE      = (ASN_APPLICATION | 4)
+      ASN_NSAP        = (ASN_APPLICATION | 5)  # historic - don't use
+      ASN_COUNTER64   = (ASN_APPLICATION | 6)
+      ASN_UINTEGER    = (ASN_APPLICATION | 7)   # historic - don't use
 
-      #define ASN_NSAP        (ASN_APPLICATION | 5)   /* historic - don't use */
-      #define ASN_COUNTER64   (ASN_APPLICATION | 6)
-      #define ASN_UINTEGER    (ASN_APPLICATION | 7)   /* historic - don't use */
+      # Exception values for SNMPv2 and SNMPv3
+      SNMP_NOSUCHOBJECT   = (ASN_CONTEXT | ASN_PRIMITIVE | 0x0)
+      SNMP_NOSUCHINSTANCE = (ASN_CONTEXT | ASN_PRIMITIVE | 0x1)
+      SNMP_ENDOFVIEW      = (ASN_CONTEXT | ASN_PRIMITIVE | 0x2)
 
 
-
+      # PDU types
       SNMP_MSG_GET        = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x0)
       SNMP_MSG_GETNEXT    = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x1) 
       SNMP_MSG_RESPONSE   = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x2) 
@@ -51,64 +63,15 @@ module Net
       SNMP_MSG_TRAP2      = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x7)
       SNMP_MSG_REPORT     = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x8)
       
+
+      # Callback status codes
       NETSNMP_CALLBACK_OP_RECEIVED_MESSAGE  =  1
       NETSNMP_CALLBACK_OP_TIMED_OUT         =  2
       NETSNMP_CALLBACK_OP_SEND_FAILED       =  3
       NETSNMP_CALLBACK_OP_CONNECT           =  4
       NETSNMP_CALLBACK_OP_DISCONNECT        =  5
       
-
-
-      USM_AUTH_KU_LEN = 32
-      USM_PRIV_KU_LEN = 32
-
-      SNMP_SEC_LEVEL_NOAUTH = 1
-      SNMP_SEC_LEVEL_AUTHNOPRIV = 2
-      SNMP_SEC_LEVEL_AUTHPRIV = 3
-
-      SNMP_DEFAULT_COMMUNITY_LEN = 0
-      SNMP_DEFAULT_RETRIES = -1
-      SNMP_DEFAULT_TIMEOUT = -1
-      SNMP_DEFAULT_REMPORT = 0
-      SNMP_DEFAULT_REQID = -1
-      SNMP_DEFAULT_MSGID = -1
-      SNMP_DEFAULT_ERRSTAT = -1
-      SNMP_DEFAULT_ERRINDEX = -1
-      SNMP_DEFAULT_ADDRESS = 0
-      SNMP_DEFAULT_ENTERPRISE_LENGTH = 0
-      SNMP_DEFAULT_TIME = 0
-      SNMP_DEFAULT_VERSION = -1
-      SNMP_DEFAULT_SECMODEL = -1
-      SNMP_DEFAULT_CONTEXT = 
-
-      SNMP_MAX_MSG_SIZE = 1472
-      SNMP_MAX_MSG_V3_HDRS = (4+3+4+7+7+3+7+16)
-      SNMP_MAX_ENG_SIZE = 32
-      SNMP_MAX_SEC_NAME_SIZE = 256
-      SNMP_MAX_CONTEXT_SIZE = 256
-      SNMP_SEC_PARAM_BUF_SIZE = 256
-      SNMPV3_IGNORE_UNAUTH_REPORTS = 0
-      SNMP_SESS_NONAUTHORITATIVE = 0
-      SNMP_SESS_AUTHORITATIVE = 1
-      SNMP_SESS_UNKNOWNAUTH = 2
-      REPORT_STATS_LEN = 9
-      REPORT_snmpUnknownSecurityModels_NUM = 1
-      REPORT_snmpInvalidMsgs_NUM = 2
-      REPORT_usmStatsUnsupportedSecLevels_NUM = 1
-      REPORT_usmStatsNotInTimeWindows_NUM = 2
-      REPORT_usmStatsUnknownUserNames_NUM = 3
-      REPORT_usmStatsUnknownEngineIDs_NUM = 4
-      REPORT_usmStatsWrongDigests_NUM = 5
-      REPORT_usmStatsDecryptionErrors_NUM = 6
-      SNMP_DETAIL_SIZE = 512
-      SNMP_FLAGS_RESP_CALLBACK = 0x400
-      SNMP_FLAGS_USER_CREATED = 0x200
-      SNMP_FLAGS_DONT_PROBE = 0x100
-      SNMP_FLAGS_STREAM_SOCKET = 0x80
-      SNMP_FLAGS_LISTENING = 0x40
-      SNMP_FLAGS_SUBSESSION = 0x20
-      SNMP_FLAGS_STRIKE2 = 0x02
-      SNMP_FLAGS_STRIKE1 = 0x01
+      # SNMP Errors
       SNMPERR_SUCCESS = (0)
       SNMPERR_GENERR = (-1)
       SNMPERR_BAD_LOCPORT = (-2)
@@ -176,6 +139,60 @@ module Net
       SNMPERR_PROTOCOL = (-64)
       SNMPERR_OID_NONINCREASING = (-65)
       SNMPERR_MAX = (-65)
+
+
+
+      USM_AUTH_KU_LEN = 32
+      USM_PRIV_KU_LEN = 32
+
+      # SNMPv3 Security Levels
+      SNMP_SEC_LEVEL_NOAUTH = 1
+      SNMP_SEC_LEVEL_AUTHNOPRIV = 2
+      SNMP_SEC_LEVEL_AUTHPRIV = 3
+
+      SNMP_DEFAULT_COMMUNITY_LEN = 0
+      SNMP_DEFAULT_RETRIES = -1
+      SNMP_DEFAULT_TIMEOUT = -1
+      SNMP_DEFAULT_REMPORT = 0
+      SNMP_DEFAULT_REQID = -1
+      SNMP_DEFAULT_MSGID = -1
+      SNMP_DEFAULT_ERRSTAT = -1
+      SNMP_DEFAULT_ERRINDEX = -1
+      SNMP_DEFAULT_ADDRESS = 0
+      SNMP_DEFAULT_ENTERPRISE_LENGTH = 0
+      SNMP_DEFAULT_TIME = 0
+      SNMP_DEFAULT_VERSION = -1
+      SNMP_DEFAULT_SECMODEL = -1
+      SNMP_DEFAULT_CONTEXT = 
+
+      SNMP_MAX_MSG_SIZE = 1472
+      SNMP_MAX_MSG_V3_HDRS = (4+3+4+7+7+3+7+16)
+      SNMP_MAX_ENG_SIZE = 32
+      SNMP_MAX_SEC_NAME_SIZE = 256
+      SNMP_MAX_CONTEXT_SIZE = 256
+      SNMP_SEC_PARAM_BUF_SIZE = 256
+      SNMPV3_IGNORE_UNAUTH_REPORTS = 0
+      SNMP_SESS_NONAUTHORITATIVE = 0
+      SNMP_SESS_AUTHORITATIVE = 1
+      SNMP_SESS_UNKNOWNAUTH = 2
+      REPORT_STATS_LEN = 9
+      REPORT_snmpUnknownSecurityModels_NUM = 1
+      REPORT_snmpInvalidMsgs_NUM = 2
+      REPORT_usmStatsUnsupportedSecLevels_NUM = 1
+      REPORT_usmStatsNotInTimeWindows_NUM = 2
+      REPORT_usmStatsUnknownUserNames_NUM = 3
+      REPORT_usmStatsUnknownEngineIDs_NUM = 4
+      REPORT_usmStatsWrongDigests_NUM = 5
+      REPORT_usmStatsDecryptionErrors_NUM = 6
+      SNMP_DETAIL_SIZE = 512
+      SNMP_FLAGS_RESP_CALLBACK = 0x400
+      SNMP_FLAGS_USER_CREATED = 0x200
+      SNMP_FLAGS_DONT_PROBE = 0x100
+      SNMP_FLAGS_STREAM_SOCKET = 0x80
+      SNMP_FLAGS_LISTENING = 0x40
+      SNMP_FLAGS_SUBSESSION = 0x20
+      SNMP_FLAGS_STRIKE2 = 0x02
+      SNMP_FLAGS_STRIKE1 = 0x01
 
 
       STAT_SNMPUNKNOWNSECURITYMODELS = 0

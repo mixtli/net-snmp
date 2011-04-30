@@ -12,7 +12,7 @@ module Wrapper
            :low, :u_long
     )
   end
-  
+
   class TimeVal < NiceFFI::Struct
     layout(:tv_sec, :long, :tv_usec, :long)
   end
@@ -20,7 +20,7 @@ module Wrapper
     puts "tv_sec = #{tv.tv_sec}, tv_usec = #{tv.tv_usec} "
   end
 
-  
+
   class NetsnmpVardata < FFI::Union
     layout(
            :integer, :pointer,
@@ -288,7 +288,7 @@ module Wrapper
   attach_function :snmp_add, [ :pointer, :pointer, callback([ :pointer, :pointer, :pointer, :int ], :int), callback([ :pointer, :pointer, :int ], :int) ], :pointer
   attach_function :snmp_add_full, [ :pointer, :pointer, callback([ :pointer, :pointer, :pointer, :int ], :int), callback([ :pointer, :pointer, :pointer, :uint ], :int), callback([ :pointer, :pointer, :int ], :int), callback([ :pointer, :pointer, :pointer, :pointer ], :int), callback([ :pointer, :pointer, :pointer, :pointer, :pointer ], :int), callback([ :pointer, :uint ], :int), callback([ :pointer, :pointer, :uint ], :pointer) ], :pointer
   attach_function :snmp_sess_send, [ :pointer, :pointer ], :int
-  attach_function :snmp_sess_async_send, [ :pointer, :pointer, :netsnmp_callback, :pointer ], :int
+  attach_function :snmp_sess_async_send, [ :pointer, :pointer, :snmp_callback, :pointer ], :int
   attach_function :snmp_sess_select_info, [ :pointer, :pointer, :pointer, :pointer, :pointer ], :int
   attach_function :snmp_sess_read, [ :pointer, :pointer ], :int
   attach_function :snmp_sess_timeout, [ :pointer ], :void
@@ -344,8 +344,7 @@ module Wrapper
   attach_function :generate_Ku, [:pointer, :int, :string, :int, :pointer, :pointer], :int
 
 
-  # Standard IO functions
-  attach_function :select, [:int, :pointer, :pointer, :pointer, :pointer], :int
+
   # MIB functions
   attach_function :init_mib, [], :void
   attach_function :read_all_mibs, [], :void
@@ -369,9 +368,35 @@ end
 end
 end
 
+
 #module RubyWrapper
-#  extend NiceFFI::Library
-#  #ffi_lib "libruby"
-#  ffi_lib "/Users/rmcclain/.rvm/rubies/ruby-1.9.2-preview3/lib/libruby.dylib"
+#  extend FFI::Library
+#  ffi_lib FFI::CURRENT_PROCESS
 #  attach_function :rb_thread_select, [:int, :pointer, :pointer, :pointer, :pointer], :int
 #end
+
+
+
+module FFI
+  module LibC
+    extend FFI::Library
+    ffi_lib [FFI::CURRENT_PROCESS, 'c']
+
+    typedef :pointer, :FILE
+    typedef :uint32, :in_addr_t
+    typedef :uint16, :in_port_t
+
+    class Timeval < FFI::Struct
+      layout :tv_sec, :time_t,
+             :tv_usec, :suseconds_t
+    end
+
+    # Standard IO functions
+    #@blocking = true  # some undocumented voodoo that tells the next attach_function to release the GIL
+    attach_function :select, [:int, :pointer, :pointer, :pointer, :pointer], :int
+    attach_variable :errno, :int
+    attach_function :malloc, [:size_t], :pointer
+    attach_function :free, [:pointer], :void
+  end
+end
+

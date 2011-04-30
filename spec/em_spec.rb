@@ -9,7 +9,7 @@ describe "em" do
       Net::SNMP::Dispatcher.em_loop
 
       session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |s|
-        s.get("sysDescr.0") do |result|
+        s.get("sysDescr.0") do |op, result|
           did_callback = true
           result.varbinds[0].value.should eql("test.net-snmp.org")
         end

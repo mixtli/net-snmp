@@ -1,21 +1,29 @@
 module Net
   module SNMP
     class Error < RuntimeError
-      #attr :status, :errno, :snmp_err, :snmp_msg
-      
+      attr_accessor :status, :errno, :snmp_err, :snmp_msg
       def initialize(opts = {})
         @status = opts[:status]
+        @fiber = opts[:fiber]
         if opts[:session]
-          errno_ptr = FFI::MemoryPointer.new(:int)
-          snmp_err_ptr = FFI::MemoryPointer.new(:int)
-          msg_ptr = FFI::MemoryPointer.new(:pointer)
-          Wrapper.snmp_error(opts[:session].pointer, errno_ptr, snmp_err_ptr, msg_ptr)
-
-          @errno = errno_ptr.read_int
-          @snmp_err = snmp_err_ptr.read_int
-          @snmp_msg = msg_ptr.read_pointer.read_string
+          @errno = opts[:session].errno
+          @snmp_err = opts[:session].snmp_err
+          @snmp_msg = opts[:session].error_message
         end
+
       end
+
+      def print
+        puts "SNMP Error: #{self.class.to_s}"
+        puts "message = #{message}"
+        puts "status = #{@status}"
+        puts "errno = #{@errno}"
+        puts "snmp_err = #{@snmp_err}"
+        puts "snmp_msg = #{@snmp_msg}"
+      end
+    end
+
+    class TimeoutError < Error
     end
   end
 end
