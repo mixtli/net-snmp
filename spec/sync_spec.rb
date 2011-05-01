@@ -1,4 +1,5 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
+require 'pp'
 
 describe "synchronous calls" do
   # To test sets, you have to have a local snmpd running with write permissions
@@ -65,29 +66,39 @@ describe "synchronous calls" do
       end
     end
 
-    it "get_table should work with multiple columns" do
-      #pending
-      session = Net::SNMP::Session.open(:peername => "localhost", :version => '1')
-      table = session.get_table("ifTable", :columns => ["ifIndex", "ifDescr", "ifName"])
-      table[0]['ifName'].should eql("lo0")
-      table[1]['ifName'].should eql("gif0")
-    end
-
     it "get_table should work" do
-      pending "not yet implemented"
+      #pending "not yet implemented"
       session = Net::SNMP::Session.open(:peername => "localhost", :version => '1')
-      table = session.get_table("ifTable", :columns => ['ifIndex', 'ifDescr'])
-      table[0]['ifIndex'].should eql(1)
-      table[1]['ifIndex'].should eql(2)
+      table = session.table("ifEntry")
+      table['1']['ifIndex'].should eql(1)
+      table['2']['ifIndex'].should eql(2)
     end
 
     it "walk should work" do
-      pending "not yet implemented"
-      session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :version => 1)
+      #pending "not yet implemented"
+      session = Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :version => 1, :community => 'demopublic')
       results = session.walk("system")
       results['1.3.6.1.2.1.1.1.0'].should match(/test.net-snmp.org/)
     end
 
+    it "walk should work with multiple oids" do
+      Net::SNMP::Session.open(:peername => 'localhost', :version => 1) do |sess|
+        sess.walk(['system', 'ifTable']) do |results|
+          pp results
+          results['1.3.6.1.2.1.1.1.0'].should match(/Darwin/)
+          results['1.3.6.1.2.1.2.2.1.1.2'].should eql(2)
+          results.size.should eql(186)
+        end
+      end
+    end
+
+    it "get_columns should work" do
+      Net::SNMP::Session.open(:peername => 'localhost') do |sess|
+        table = sess.columns(['ifIndex', 'ifDescr', 'ifType'])
+        table['1']['ifIndex'].should eql(1)
+        table['2']['ifDescr'].should eql('gif0')
+      end
+    end
   end
 
   context "version 2" do

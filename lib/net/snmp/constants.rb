@@ -49,7 +49,7 @@ module Net
       # Exception values for SNMPv2 and SNMPv3
       SNMP_NOSUCHOBJECT   = (ASN_CONTEXT | ASN_PRIMITIVE | 0x0)
       SNMP_NOSUCHINSTANCE = (ASN_CONTEXT | ASN_PRIMITIVE | 0x1)
-      SNMP_ENDOFVIEW      = (ASN_CONTEXT | ASN_PRIMITIVE | 0x2)
+      SNMP_ENDOFMIBVIEW      = (ASN_CONTEXT | ASN_PRIMITIVE | 0x2)
 
 
       # PDU types
@@ -71,6 +71,35 @@ module Net
       NETSNMP_CALLBACK_OP_CONNECT           =  4
       NETSNMP_CALLBACK_OP_DISCONNECT        =  5
       
+
+      # Error codes (the value of the field error-status in PDUs)
+
+      # in SNMPv1, SNMPsec, SNMPv2p, SNMPv2c, SNMPv2u, SNMPv2*, and SNMPv3 PDUs
+      SNMP_ERR_NOERROR               = (0)     # XXX  Used only for PDUs?
+      SNMP_ERR_TOOBIG                = (1)
+      SNMP_ERR_NOSUCHNAME            = (2)
+      SNMP_ERR_BADVALUE              = (3)
+      SNMP_ERR_READONLY              = (4)
+      SNMP_ERR_GENERR                = (5)
+
+      # in SNMPv2p, SNMPv2c, SNMPv2u, SNMPv2*, and SNMPv3 PDUs
+      SNMP_ERR_NOACCESS               = (6)
+      SNMP_ERR_WRONGTYPE              = (7)
+      SNMP_ERR_WRONGLENGTH            = (8)
+      SNMP_ERR_WRONGENCODING          = (9)
+      SNMP_ERR_WRONGVALUE             = (10)
+      SNMP_ERR_NOCREATION             = (11)
+      SNMP_ERR_INCONSISTENTVALUE      = (12)
+      SNMP_ERR_RESOURCEUNAVAILABLE    = (13)
+      SNMP_ERR_COMMITFAILED           = (14)
+      SNMP_ERR_UNDOFAILED             = (15)
+      SNMP_ERR_AUTHORIZATIONERROR     = (16)
+      SNMP_ERR_NOTWRITABLE            = (17)
+
+      # in SNMPv2c, SNMPv2u, SNMPv2*, and SNMPv3 PDUs
+      SNMP_ERR_INCONSISTENTNAME       = (18)
+
+
       # SNMP Errors
       SNMPERR_SUCCESS = (0)
       SNMPERR_GENERR = (-1)

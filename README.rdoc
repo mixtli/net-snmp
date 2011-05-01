@@ -12,7 +12,8 @@ It provides classes for sessions, pdus, varbinds, and more.
 * Supports sending of snmpv1 traps and snmpv2 traps/informs using TrapSession
 * Integrates well with eventmachine, or can be used standalone.
 * In Ruby 1.9, uses fibers behind the scenes to emulate synchronous calls asynchronously
-
+* MIB support
+* Convenience methods such as session.walk, session.get_columns, and session.table
 
 == USAGE
 
@@ -49,7 +50,7 @@ You must call Session.close when you're done with a session to avoid leaking mem
     In the synchronous versions, all session methods raise Net::SNMP:Error on any error.  Timeouts raise Net::SNMP::TimeoutError.
     In the asynchronous versions, the first argument to your callback will be the return status.  Possible values include :success, :timeout, and :send_error.
     If you need the underlying net-snmp session errors, you can call session.errno, session.snmp_err, and session.error_message.
-    
+    PDU errors can be retreived with pdu.errstat, pdu.errindex giving the index of the offending varbind.  See constants.rb for possible errors.
 
 == EXAMPLES
 
@@ -137,6 +138,13 @@ Net::SNMP::OID objects.  For example
 
 For more complex MIB parsing needs, see smi-ffi[http://github.com/mixtli/smi-ffi]
 
+== EXPERIMENTAL THREAD SUPPORT
+If you intent to use threads, you should set:
+
+   Net::SNMP.thread_safe = true
+
+Thread support is experimental and may be dropped.  Let me know if you're using this feature.
+
 == CAVEATS/DISCLAIMER
 
 THIS GEM COULD CRASH YOUR SYSTEM AND EAT YOUR CHILDREN!
@@ -166,7 +174,8 @@ break this gem.  Please let me know if you find bugs or missing features.  Or be
 * Commit, do not mess with rakefile, version, or history.
   (if you want to have your own version, that is fine but bump version in a commit by itself I can ignore when I pull)
 * Send me a pull request. Bonus points for topic branches.
+* Bug reports including a failing rspec get priority treatment
 
-== Copyright
+ == Copyright
 
 Copyright (c) 2010 mixtli. See LICENSE for details.

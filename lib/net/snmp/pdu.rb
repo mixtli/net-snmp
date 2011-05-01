@@ -82,7 +82,6 @@ module Net
       # * +type+ The data type.  Possible values include Net::SNMP::ASN_OCTET_STR, Net::SNMP::ASN_COUNTER, etc.  See constants.rb
       # * +value+  The value of the varbind.  default is nil.
       def add_varbind(options)
-        #puts "adding varbind #{options.inspect}"
         options[:type] ||= case options[:value]
           when String
             Constants::ASN_OCTET_STR
@@ -125,7 +124,7 @@ module Net
             end
         end
 
-        oid = options[:oid].kind_of?(Net::SNMP::OID) ? options[:oid] : Net::SNMP::OID.new(options[:oid])
+        oid = options[:oid].kind_of?(OID) ? options[:oid] : OID.new(options[:oid])
         var_ptr = Wrapper.snmp_pdu_add_variable(@struct.pointer, oid.pointer, oid.length_pointer.read_int, options[:type], value, value_len)
         varbind = Varbind.new(var_ptr)
         #Wrapper.print_varbind(varbind.struct)
@@ -142,6 +141,9 @@ module Net
         Wrapper::snmp_errstring(self.errstat)
       end
 
+      def print_errors
+        puts "errstat = #{self.errstat}, index = #{self.errindex}, message = #{self.error_message}"
+      end
       # Free the pdu
       def free
         Wrapper.snmp_free_pdu(@struct.pointer)

@@ -33,9 +33,7 @@ module Net
         # * +retries+ - snmp retries.  default = 5
         # Returns:
         # Net::SNMP::Session
-
         def open(options = {})
-          #puts "building session"
           session = new(options)
           if Net::SNMP::thread_safe
             Net::SNMP::Session.lock.synchronize {
@@ -52,7 +50,6 @@ module Net
       end
 
       def initialize(options = {})
-        #puts "in initialize"
         @timeout = options[:timeout] || 1
         @retries = options[:retries] || 5
         @requests = {}
@@ -189,20 +186,17 @@ module Net
         end
       end
 
-
-
-
       def default_max_repeaters
         # We could do something based on transport here.  25 seems safe
         25
       end
 
-
-
       # Raise a NET::SNMP::Error with the session attached
       def error(msg, options = {})
         #Wrapper.snmp_sess_perror(msg, @sess.pointer)
-        raise Error.new({:session => self}.merge(options)), msg
+        err =  Error.new({:session => self}.merge(options))
+        err.print
+        raise err, msg
       end
       
 
@@ -247,6 +241,90 @@ module Net
       alias :poll :select
 
 
+      # Issue repeated getnext requests on each oid passed in until
+      # the result is no longer a child.  Returns a hash with the numeric
+      # oid strings as keys.
+      # XXX work in progress.   only works synchronously (except with EM + fibers).
+      # Need to do better error checking and use getbulk when avaiable.
+      def walk(oidlist)
+        oidlist = [oidlist] unless oidlist.kind_of?(Array)
+        oidlist = oidlist.map {|o| o.kind_of?(OID) ? o : OID.new(o)}
+        all_results = {}
+        base_list = oidlist
+        while(!oidlist.empty? && pdu = get_next(oidlist))
+          debug "==============================================================="
+          debug "base_list = #{base_list}"
+          prev_base = base_list.dup
+          oidlist = []
+          print_errors
+          pdu.print_errors
+          pdu.varbinds.each_with_index do |vb, i|
+            if prev_base[i].parent_of?(vb.oid) && vb.object_type != Constants::SNMP_ENDOFMIBVIEW
+              # Still in subtree.  Store results and add next oid to list
+              debug "adding #{vb.oid} to oidlist"
+              all_results[vb.oid.to_s] = vb.value
+              oidlist << vb.oid
+            else
+              # End of subtree.  Don't add to list or results
+              debug "End of subtree"
+              base_list.delete_at(i)
+              debug "not adding #{vb.oid}"
+            end
+            # If get a pdu error, we can only tell the first failing varbind,
+            # So we remove it and resend all the rest
+            if pdu.error? && pdu.errindex == i + 1
+              oidlist.pop  # remove the bad oid
+              debug "caught error"
+              if pdu.varbinds.size > i+1
+                # recram rest of oids on list
+                ((i+1)..pdu.varbinds.size).each do |j|
+                  debug "j = #{j}"
+                  debug "adding #{j} = #{prev_list[j]}"
+                  oidlist << prev_list[j]
+                end
+                # delete failing oid from base_list
+                base_list.delete_at(i)
+              end
+              break
+            end
+          end
+        end
+        if block_given?
+          yield all_results
+        end
+        all_results
+      end
+
+
+      # Given a list of columns (e.g ['ifIndex', 'ifDescr'], will return a hash with
+      # the indexes as keys and hashes as values.
+      #   puts sess.get_columns(['ifIndex', 'ifDescr']).inspect
+      #   {'1' => {'ifIndex' => '1', 'ifDescr' => 'lo0'}, '2' => {'ifIndex' => '2', 'ifDescr' => 'en0'}}
+      def columns(columns)
+        columns = columns.map {|c| c.kind_of?(OID) ? c : OID.new(c)}
+        walk_hash = walk(columns)
+        results = {}
+        walk_hash.each do |k, v|
+          oid = OID.new(k)
+          results[oid.index] ||= {}
+          results[oid.index][oid.node.label] = v
+        end
+        if block_given?
+          yield results
+        end
+        results
+      end
+
+      # table('ifEntry').  You must pass the direct parent entry.  Calls columns with all
+      # columns in +table_name+
+      def table(table_name, &blk)
+        column_names = MIB::Node.get_node(table_name).children.collect {|c| c.oid }
+        results = columns(column_names)
+        if block_given?
+          yield results
+        end
+        results
+      end
 
       # Send a PDU
       # +pdu+  The Net::SNMP::PDU object to send.  Usually created by Session.get, Session.getnext, etc.
@@ -280,10 +358,9 @@ module Net
       #     puts e.message
       #   end
       def send_pdu(pdu, &callback)
-        #puts "send_pdu #{Fiber.current.inspect}"
         if block_given?
           @requests[pdu.reqid] = callback
-          puts "calling async_send"
+          debug "calling async_send"
           if Wrapper.snmp_sess_async_send(@struct, pdu.pointer, sess_callback, nil) == 0
             error("snmp_get async failed")
           end
@@ -346,11 +423,14 @@ module Net
         get_error
         @snmp_msg
       end
-      
+
+      def print_errors
+        puts "errno: #{errno}, snmp_err: #{@snmp_err}, message: #{@snmp_msg}"
+      end
       private
       def sess_callback
         @sess_callback ||= FFI::Function.new(:int, [:int, :pointer, :int, :pointer, :pointer]) do |operation, session, reqid, pdu_ptr, magic|
-          #puts "in callback #{operation.inspect} #{session.inspect}"
+          debug "in callback #{operation.inspect} #{session.inspect}"
           op = case operation
             when Constants::NETSNMP_CALLBACK_OP_RECEIVED_MESSAGE
               :success
@@ -386,86 +466,7 @@ module Net
           @snmp_msg = msg_ptr.read_pointer.read_string
       end
 
-      public
-      # XXX This needs work.  Need to use getbulk for speed, guess maxrepeaters, etc..
-      # Also need to figure out how we can tell column names from something like ifTable
-      # instead of ifEntry.  Needs to handle errors, there are probably offset problems
-      # in cases of bad data, and various other problems.  Also need to add async support.
-      # Maybe return a hash with index as key?
-      def get_table(table_name, options = {})
-        column_names = options[:columns] || MIB::Node.get_node(table_name).children.collect {|c| c.label }
-        results = []
 
-#        repeat_count = if @version.to_s == '1' || options[:no_getbulk]
-#            1
-#          elsif options[:repeat_count]
-#            options[:repeat_count]
-#          else
-#            (1000 / 36 / (column_names.size + 1)).to_i
-#        end
-#
-#        res = if @version.to_s != '1' && !options[:no_getbulk]
-#          get_bulk(column_names, :max_repetitions => repeat_count)
-#        else
-#          get_next(column_names)
-#        end
-
-
-        first_result = get_next(column_names)
-        oidlist = []
-        good_column_names = []
-        row = {}
-
-        first_result.varbinds.each_with_index do |vb, idx|
-          oid = vb.oid
-          if oid.label[0..column_names[idx].length - 1] == column_names[idx]
-            oidlist << oid.label
-            good_column_names << column_names[idx]
-            row[column_names[idx]] = vb.value
-          end
-        end
-        results << row
-
-        catch :break_main_loop do
-          while(result = get_next(oidlist))
-            oidlist = []
-            row = {}
-            result.varbinds.each_with_index do |vb, idx|
-              #puts "got #{vb.oid.label} #{vb.value.inspect}, type = #{vb.object_type}"
-              row[good_column_names[idx]] = vb.value
-              oidlist << vb.oid.label
-              if vb.oid.label[0..good_column_names[idx].length - 1] != good_column_names[idx]
-                throw :break_main_loop
-              end
-            end
-            results << row
-          end
-        end
-        results
-      end
-
-
-#      def get_entries_cb(pdu, columns, options)
-#        cache = {}
-#        row_index = nil
-#        varbinds = pdu.varbinds.dup
-#        while(varbinds.size > 0)
-#          row = {}
-#          columns.each do |column|
-#            vb = varbinds.shift
-#            if vb.oid.to_s =~ /#{column.to_s}\.(\d+(:?\.\d+)*)/
-#              index = $1
-#            else
-#              last_entry = true
-#              next
-#            end
-#            row_index = index unless row_index
-#            index_cmp = Net::SNMP.oid_lex_cmp(index, row_index)
-#            if(index_cmp == 0)
-#            end
-#          end
-#        end
-#      end
     end
   end
 end

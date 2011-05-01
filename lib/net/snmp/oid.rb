@@ -52,6 +52,22 @@ module Net
         node.label + "." + index
       end
    
+      def <=>(o)
+        a = self._packed
+        b = o._packed
+        a <=> b
+      end
+
+      def _packed
+        i = self.to_s.dip
+        i.sub!(/^\./,'')
+        i.gsub!(/ /, '.0')
+        i.replace(i.split('.').map(&:to_i).pack('N*'))
+      end
+
+      def parent_of?(o)
+        o.to_s =~ /^#{self.to_s}\./
+      end
     end
   end
 end
