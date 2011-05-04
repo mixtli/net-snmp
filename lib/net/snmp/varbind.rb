@@ -36,8 +36,8 @@ module Net
           struct.val[:objid].read_string(struct.val_len).unpack('CCCC').join(".")
         when Constants::ASN_NULL
           nil
-        when Constants::ASN_OBJECT_ID
-          Net::SNMP::OID.new(struct.val[:objid].read_array_of_long(struct.val_len).join("."))
+          when Constants::ASN_OBJECT_ID
+          Net::SNMP::OID.new(struct.val[:objid].read_array_of_long(struct.val_len / 8).join("."))
         when Constants::ASN_COUNTER64
           counter = Wrapper::Counter64.new(struct.val[:counter64])
           counter.high * 2^32 + counter.low

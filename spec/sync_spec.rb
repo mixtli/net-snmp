@@ -99,6 +99,13 @@ describe "synchronous calls" do
         table['2']['ifDescr'].should eql('gif0')
       end
     end
+
+    it "get a value with oid type should work" do
+      Net::SNMP::Session.open(:peername => 'test.net-snmp.org', :community => 'demopublic') do |sess|
+        res = sess.get("sysORID.1")
+        res.varbinds.first.value.to_s.should eql('1.3.6.1.6.3.1')
+      end
+    end
   end
 
   context "version 2" do

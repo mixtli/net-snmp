@@ -256,8 +256,8 @@ module Net
           debug "base_list = #{base_list}"
           prev_base = base_list.dup
           oidlist = []
-          print_errors
-          pdu.print_errors
+          #print_errors
+          #pdu.print_errors
           pdu.varbinds.each_with_index do |vb, i|
             if prev_base[i].parent_of?(vb.oid) && vb.object_type != Constants::SNMP_ENDOFMIBVIEW
               # Still in subtree.  Store results and add next oid to list
@@ -370,6 +370,7 @@ module Net
           if defined?(EM) && EM.reactor_running? && defined?(Fiber)
             f = Fiber.current
             send_pdu pdu do | op, response_pdu |
+              #pdu.free
               f.resume([op, response_pdu])
             end
             op, result = Fiber.yield

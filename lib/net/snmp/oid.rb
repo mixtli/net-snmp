@@ -28,6 +28,9 @@ module Net
         @length_pointer.read_int * 8 # XXX 8 = sizeof(oid) on my system.  Not sure if it's different on others
       end
 
+      def length
+        @length_pointer.read_int
+      end
       def oid
         @oid
       end
