@@ -31,6 +31,11 @@ module Net
         # * +version+ - snmp version.  Possible values include 1, '2c', and 3. Default is 1.
         # * +timeout+ - snmp timeout in seconds
         # * +retries+ - snmp retries.  default = 5
+        # * +security_level+ - SNMPv3 only. default = Net::SNMP::Constants::SNMP_SEC_LEVEL_NOAUTH
+        # * +auth_protocol+ - SNMPv3 only. default is nil (usmNoAuthProtocol). Possible values include :md5, :sha1, and nil
+        # * +context+ - SNMPv3 only.
+        # * +username+ - SNMPv3 only.
+        # * +password+ - SNMPv3 only.
         # Returns:
         # Net::SNMP::Session
         def open(options = {})
