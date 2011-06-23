@@ -78,6 +78,25 @@ An asynchronous SNMP-GET
     Net::SNMP::Dispatcher.select(false)  #Setting timeout to false causes dispatcher to block until data is ready
     session.close
 
+An SNMPv3 synchronous AuthPriv (encrypted) SNMP-GET
+
+  Net::SNMP::Session.open(:peername => "test.net-snmp.org",
+													:community => "demopublic",
+													:version => "3",
+													:security_level => Net::SNMP::Constants::SNMP_SEC_LEVEL_AUTHPRIV,
+													:auth_protocol => :sha1,
+													:priv_protocol => :des,
+													:username => "myuser",
+													:password => "mypassword"
+													) {|session|
+  	begin
+    	pdu = session.get("sysDescr.0")
+    	puts pdu.varbinds.first.value
+  	rescue Net::SNMP::Error => e
+    	puts e.message
+  	end
+	end
+
 Running the dispatcher from eventmachine
     EM.run do
       Net::SNMP::Dispatcher.em_loop
