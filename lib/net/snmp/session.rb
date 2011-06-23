@@ -33,6 +33,7 @@ module Net
         # * +retries+ - snmp retries.  default = 5
         # * +security_level+ - SNMPv3 only. default = Net::SNMP::Constants::SNMP_SEC_LEVEL_NOAUTH
         # * +auth_protocol+ - SNMPv3 only. default is nil (usmNoAuthProtocol). Possible values include :md5, :sha1, and nil
+        # * +priv_protocol+ - SNMPv3 only. default is nil (usmNoPrivProtocol). Possible values include :des, :aes, and nil
         # * +context+ - SNMPv3 only.
         # * +username+ - SNMPv3 only.
         # * +password+ - SNMPv3 only.
@@ -97,9 +98,20 @@ module Net
               when nil
                 OID.new("1.3.6.1.6.3.10.1.1.1").pointer
           end
+          @sess.securityPrivProto = case options[:priv_protocol]
+              when :aes
+                OID.new("1.3.6.1.6.3.10.1.2.4").pointer
+              when :des
+                OID.new("1.3.6.1.6.3.10.1.2.2").pointer
+              when nil
+                OID.new("1.3.6.1.6.3.10.1.2.1").pointer
+          end
           
           @sess.securityAuthProtoLen = 10
           @sess.securityAuthKeyLen = Constants::USM_AUTH_KU_LEN
+
+          @sess.securityPrivProtoLen = 10
+          @sess.securityPrivKeyLen = Constants::USM_PRIV_KU_LEN
 
           if options[:context]
             @sess.contextName = FFI::MemoryPointer.from_string(options[:context])
@@ -115,11 +127,33 @@ module Net
               @sess.securityName = FFI::MemoryPointer.from_string(options[:username])
               @sess.securityNameLen = options[:username].length
             end
+
             auth_len_ptr = FFI::MemoryPointer.new(:size_t)
             auth_len_ptr.write_int(Constants::USM_AUTH_KU_LEN)
-            key_result = Wrapper.generate_Ku(@sess.securityAuthProto, @sess.securityAuthProtoLen, options[:password], options[:password].length, @sess.securityAuthKey, auth_len_ptr)
+            auth_key_result = Wrapper.generate_Ku(@sess.securityAuthProto,
+                                             @sess.securityAuthProtoLen,
+                                             options[:password],
+                                             options[:password].length,
+                                             @sess.securityAuthKey,
+                                             auth_len_ptr)
             @sess.securityAuthKeyLen = auth_len_ptr.read_int
-            unless key_result == Constants::SNMPERR_SUCCESS
+
+            if @sess.securityLevel == Constants::SNMP_SEC_LEVEL_AUTHPRIV
+              priv_len_ptr = FFI::MemoryPointer.new(:size_t)
+              priv_len_ptr.write_int(Constants::USM_PRIV_KU_LEN)
+
+              # NOTE I know this is handing off the AuthProto, but generates a proper
+              # key for encryption, and using PrivProto does not.
+              priv_key_result = Wrapper.generate_Ku(@sess.securityAuthProto,
+                                               @sess.securityAuthProtoLen,
+                                               options[:password],
+                                               options[:password].length,
+                                               @sess.securityPrivKey,
+                                               auth_len_ptr)
+              @sess.securityPrivKeyLen = priv_len_ptr.read_int
+            end
+
+            unless auth_key_result == Constants::SNMPERR_SUCCESS and priv_key_result == Constants::SNMPERR_SUCCESS
               Wrapper.snmp_perror("netsnmp")
             end
           end
