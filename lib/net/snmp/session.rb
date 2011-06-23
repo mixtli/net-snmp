@@ -101,16 +101,22 @@ module Net
             @sess.contextNameLen = options[:context].length
           end
 
-          if options[:username]
-            @sess.securityName = FFI::MemoryPointer.from_string(options[:username])
-            @sess.securityNameLen = options[:username].length
-          end
-          auth_len_ptr = FFI::MemoryPointer.new(:size_t)
-          auth_len_ptr.write_int(Constants::USM_AUTH_KU_LEN)
-          key_result = Wrapper.generate_Ku(@sess.securityAuthProto, @sess.securityAuthProtoLen, options[:password], options[:password].length, @sess.securityAuthKey, auth_len_ptr)
-          @sess.securityAuthKeyLen = auth_len_ptr.read_int
-          unless key_result == Constants::SNMPERR_SUCCESS
-            Wrapper.snmp_perror("netsnmp")
+          # Do not generate_Ku, unless we're Auth or AuthPriv
+          unless @sess.securityLevel == Constants::SNMP_SEC_LEVEL_NOAUTH
+            if options[:username].nil? or options[:password].nil?
+              raise Net::SNMP::Error.new "SecurityLevel requires username and password"
+            end
+            if options[:username]
+              @sess.securityName = FFI::MemoryPointer.from_string(options[:username])
+              @sess.securityNameLen = options[:username].length
+            end
+            auth_len_ptr = FFI::MemoryPointer.new(:size_t)
+            auth_len_ptr.write_int(Constants::USM_AUTH_KU_LEN)
+            key_result = Wrapper.generate_Ku(@sess.securityAuthProto, @sess.securityAuthProtoLen, options[:password], options[:password].length, @sess.securityAuthKey, auth_len_ptr)
+            @sess.securityAuthKeyLen = auth_len_ptr.read_int
+            unless key_result == Constants::SNMPERR_SUCCESS
+              Wrapper.snmp_perror("netsnmp")
+            end
           end
         end
         # General callback just takes the pdu, calls the session callback if any, then the request specific callback.
