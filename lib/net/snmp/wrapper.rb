@@ -56,9 +56,9 @@ module Wrapper
            :data, :pointer,
            :dataFreeHook, callback([ :pointer ], :void),
            :index, :int
-    )  
+    )
   end
-  
+
   #puts "VariableList size = #{VariableList.size}"
 
   def self.print_pdu(p)
@@ -76,7 +76,7 @@ module Wrapper
       print_varbind(var)
       v = var.next_variable
     end
-    
+
   end
   class SnmpPdu < NiceFFI::Struct
     layout(
@@ -299,7 +299,7 @@ module Wrapper
   attach_function :snmp_pdu_type, [ :int ], :string
 
 
-  
+
   attach_function :asn_check_packet, [ :pointer, :uint ], :int
   attach_function :asn_parse_int, [ :pointer, :pointer, :pointer, :pointer, :uint ], :pointer
   attach_function :asn_build_int, [ :pointer, :pointer, :u_char, :pointer, :uint ], :pointer
@@ -338,7 +338,7 @@ module Wrapper
   attach_function :snmp_api_errstring, [ :int ], :string
   attach_function :snmp_perror, [ :string ], :void
   attach_function :snmp_set_detail, [ :string ], :void
-  
+
   attach_function :snmp_select_info, [:pointer, :pointer, :pointer, :pointer], :int
   attach_function :snmp_read, [:pointer], :void
   attach_function :generate_Ku, [:pointer, :int, :string, :int, :pointer, :pointer], :int
@@ -346,11 +346,11 @@ module Wrapper
 
 
   # MIB functions
-  attach_function :init_mib, [], :void
+  attach_function :netsnmp_init_mib, [], :void
   attach_function :read_all_mibs, [], :void
   attach_function :add_mibdir, [:string], :int
   attach_function :read_mib, [:string], Tree.typed_pointer
-  attach_function :read_module, [:string], Tree.typed_pointer
+  attach_function :netsnmp_read_module, [:string], Tree.typed_pointer
   attach_function :snmp_set_save_descriptions, [:int], :void
 
   attach_function :get_tree_head, [], Tree.typed_pointer
@@ -362,7 +362,7 @@ module Wrapper
   def self.get_fd_set
     FFI::MemoryPointer.new(:pointer, 128)
   end
-  
+
 
 end
 end
