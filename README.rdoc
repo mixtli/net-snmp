@@ -87,7 +87,8 @@ An SNMPv3 synchronous AuthPriv (encrypted) SNMP-GET
 													:auth_protocol => :sha1,
 													:priv_protocol => :des,
 													:username => "myuser",
-													:password => "mypassword"
+													:auth_password => "mypassword",
+                                                                                                        :priv_password => "myprivpasswd"
 													) {|session|
   	begin
     	pdu = session.get("sysDescr.0")

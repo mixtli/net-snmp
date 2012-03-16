@@ -36,7 +36,8 @@ module Net
         # * +priv_protocol+ - SNMPv3 only. default is nil (usmNoPrivProtocol). Possible values include :des, :aes, and nil
         # * +context+ - SNMPv3 only.
         # * +username+ - SNMPv3 only.
-        # * +password+ - SNMPv3 only.
+        # * +auth_password+ - SNMPv3 only.
+        # * +priv_password+ - SNMPv3 only.  
         # Returns:
         # Net::SNMP::Session
         def open(options = {})
@@ -113,6 +114,7 @@ module Net
           @sess.securityPrivProtoLen = 10
           @sess.securityPrivKeyLen = Constants::USM_PRIV_KU_LEN
 
+
           if options[:context]
             @sess.contextName = FFI::MemoryPointer.from_string(options[:context])
             @sess.contextNameLen = options[:context].length
@@ -120,7 +122,8 @@ module Net
 
           # Do not generate_Ku, unless we're Auth or AuthPriv
           unless @sess.securityLevel == Constants::SNMP_SEC_LEVEL_NOAUTH
-            if options[:username].nil? or options[:password].nil?
+            options[:auth_password] ||= options[:password]  # backward compatability
+            if options[:username].nil? or options[:auth_password].nil?
               raise Net::SNMP::Error.new "SecurityLevel requires username and password"
             end
             if options[:username]
@@ -132,8 +135,8 @@ module Net
             auth_len_ptr.write_int(Constants::USM_AUTH_KU_LEN)
             auth_key_result = Wrapper.generate_Ku(@sess.securityAuthProto,
                                              @sess.securityAuthProtoLen,
-                                             options[:password],
-                                             options[:password].length,
+                                             options[:auth_password],
+                                             options[:auth_password].length,
                                              @sess.securityAuthKey,
                                              auth_len_ptr)
             @sess.securityAuthKeyLen = auth_len_ptr.read_int
@@ -146,10 +149,10 @@ module Net
               # key for encryption, and using PrivProto does not.
               priv_key_result = Wrapper.generate_Ku(@sess.securityAuthProto,
                                                @sess.securityAuthProtoLen,
-                                               options[:password],
-                                               options[:password].length,
+                                               options[:priv_password],
+                                               options[:priv_password].length,
                                                @sess.securityPrivKey,
-                                               auth_len_ptr)
+                                               priv_len_ptr)
               @sess.securityPrivKeyLen = priv_len_ptr.read_int
             end
 
@@ -267,9 +270,9 @@ module Net
 
           Wrapper.snmp_sess_select_info(@struct, num_fds, fdset, tval.pointer, block )
           tv = (timeout == false ? nil : tval)
-          debug "Calling select #{Time.now}"
+          #debug "Calling select #{Time.now}"
           num_ready = FFI::LibC.select(num_fds.read_int, fdset, nil, nil, tv)
-          debug "Done select #{Time.now}"
+          #debug "Done select #{Time.now}"
           if num_ready > 0
             Wrapper.snmp_sess_read(@struct, fdset)
           elsif num_ready == 0

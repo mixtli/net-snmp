@@ -28,7 +28,7 @@ describe "synchronous calls" do
     end
 
     it "set should succeed" do
-      Net::SNMP::Session.open(:peername => '127.0.0.1', :version => 1) do |sess|
+      Net::SNMP::Session.open(:peername => '127.0.0.1', :version => 1, :community => 'private') do |sess|
         result = sess.set([['sysContact.0', Net::SNMP::Constants::ASN_OCTET_STR, 'yomama']])
         result.varbinds.first.value.should match(/yomama/)
         result.should_not be_error
@@ -84,10 +84,10 @@ describe "synchronous calls" do
     it "walk should work with multiple oids" do
       Net::SNMP::Session.open(:peername => 'localhost', :version => 1) do |sess|
         sess.walk(['system', 'ifTable']) do |results|
-          pp results
+          #pp results
           results['1.3.6.1.2.1.1.1.0'].should match(/Darwin/)
           results['1.3.6.1.2.1.2.2.1.1.2'].should eql(2)
-          results.size.should eql(186)
+          results.size.should eql(208)
         end
       end
     end
@@ -125,6 +125,13 @@ describe "synchronous calls" do
       Net::SNMP::Session.open(:peername => '127.0.0.1', :version => 3, :username => 'myuser', :auth_protocol => :sha1, :password => '0x1234') do |sess|
         result = sess.set([["sysDescr.0", Net::SNMP::Constants::ASN_OCTET_STR, 'yomama']])
         result.varbinds.first.value.should match(/Darwin/)
+      end
+    end
+
+    it "should get using authpriv" do
+      Net::SNMP::Session.open(:peername => '127.0.0.1', :version => 3, :username => 'mixtli', :security_level => Net::SNMP::Constants::SNMP_SEC_LEVEL_AUTHPRIV, :auth_protocol => :md5, :priv_protocol => :des, :auth_password => 'testauth', :priv_password => 'testpass') do |sess|
+        result = sess.get("sysDescr.0")
+        result.varbinds.first.value.should match(/xenu/)
       end
     end
   end

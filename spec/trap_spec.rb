@@ -12,7 +12,7 @@ describe "snmp traps" do
   end
 
   it "should send a v2 inform" do
-    #pending "still working on it"
+    pending "still working on it"
     did_callback = false
     Net::SNMP::TrapSession.open(:peername => '127.0.0.1', :version => '2c') do |sess|
       sess.inform(:oid => 'coldStart.0') do |op, res|
@@ -24,7 +24,7 @@ describe "snmp traps" do
   end
 
   it "should send v2 trap" do
-    #pending "still working on it"
+    pending "still working on it"
     Net::SNMP::TrapSession.open(:peername => '127.0.0.1', :version => '2c') do |sess|
       res = sess.trap_v2(:oid => 'warmStart.0')
       res.should be_true
