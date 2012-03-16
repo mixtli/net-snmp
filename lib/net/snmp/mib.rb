@@ -3,7 +3,7 @@ module Net
   module SNMP
     module MIB
       def self.init
-        Wrapper.init_mib
+        Wrapper.netsnmp_init_mib
       end
       
       def self.read_all_mibs
@@ -22,7 +22,7 @@ module Net
         Wrapper.read_mib(filename)
       end
       def self.read_module(name)
-        Wrapper.read_module(name)
+        Wrapper.netsnmp_read_module(name)
       end
       
     end

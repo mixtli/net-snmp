@@ -346,11 +346,11 @@ module Wrapper
 
 
   # MIB functions
-  attach_function :init_mib, [], :void
+  attach_function :netsnmp_init_mib, [], :void
   attach_function :read_all_mibs, [], :void
   attach_function :add_mibdir, [:string], :int
   attach_function :read_mib, [:string], Tree.typed_pointer
-  attach_function :read_module, [:string], Tree.typed_pointer
+  attach_function :netsnmp_read_module, [:string], Tree.typed_pointer
   attach_function :snmp_set_save_descriptions, [:int], :void
 
   attach_function :get_tree_head, [], Tree.typed_pointer
