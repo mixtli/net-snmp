@@ -20,7 +20,11 @@ module Net
       
       # Returns the OID associated with the varbind
       def oid
-        @oid ||= Net::SNMP::OID.new(@struct.name.read_array_of_long(@struct.name_length).join("."))
+        @oid ||= if Net::SNMP::Inline.oid_size == 8 
+                   Net::SNMP::OID.new(@struct.name.read_array_of_long(@struct.name_length).join("."))
+                 else
+                   Net::SNMP::OID.new(@struct.name.read_array_of_int(@struct.name_length).join("."))
+                 end
       end
 
       # Returns the value of the varbind
@@ -37,7 +41,11 @@ module Net
         when Constants::ASN_NULL
           nil
           when Constants::ASN_OBJECT_ID
-          Net::SNMP::OID.new(struct.val[:objid].read_array_of_long(struct.val_len / 8).join("."))
+            if Net::SNMP::Inline.oid_size == 8
+              Net::SNMP::OID.new(struct.val[:objid].read_array_of_long(struct.val_len / Net::SNMP::Inline.oid_size).join("."))
+            else
+              Net::SNMP::OID.new(struct.val[:objid].read_array_of_int(struct.val_len / Net::SNMP::Inline.oid_size).join("."))
+            end
         when Constants::ASN_COUNTER64
           counter = Wrapper::Counter64.new(struct.val[:counter64])
           counter.high * 2^32 + counter.low

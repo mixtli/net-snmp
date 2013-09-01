@@ -150,7 +150,9 @@ module Net
       end
 
       def print
-        puts pdu.inspect
+        varbinds.each do |v|
+          puts "#{v.oid} = #{v.value}"
+        end
       end
     end
   end

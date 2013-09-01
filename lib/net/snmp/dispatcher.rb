@@ -90,7 +90,7 @@ class Net::SNMP::Dispatcher
     def fiber_loop(options = {})
       timeout = options[:timeout]
       sleep_time = options[:sleep] || 0.2
-      Fiber.new {
+      fib = Fiber.new {
         loop do
           num_handled = poll(timeout)
           if num_handled == 0
@@ -101,7 +101,8 @@ class Net::SNMP::Dispatcher
             Fiber.yield
           end
         end
-      }.resume(nil)
+      }
+      fib.resume
     end
   end
 end

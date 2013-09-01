@@ -8,7 +8,7 @@ module Net
       end
       def initialize(oid)
         @oid = oid
-        @pointer = FFI::MemoryPointer.new(:ulong, Constants::MAX_OID_LEN)
+        @pointer = FFI::MemoryPointer.new(Net::SNMP::Inline.oid_size * Constants::MAX_OID_LEN)
         @length_pointer = FFI::MemoryPointer.new(:size_t)
         @length_pointer.write_int(Constants::MAX_OID_LEN)
         if @oid =~ /^[\d\.]*$/
@@ -25,7 +25,7 @@ module Net
       end
 
       def size
-        @length_pointer.read_int * 8 # XXX 8 = sizeof(oid) on my system.  Not sure if it's different on others
+        @length_pointer.read_int * Net::SNMP::Inline.oid_size 
       end
 
       def length
@@ -40,7 +40,11 @@ module Net
       end
 
       def to_s
-        @pointer.read_array_of_long(length_pointer.read_int).join(".")
+        if Net::SNMP::Inline.oid_size == 8
+          @pointer.read_array_of_ulong(length).join(".")
+        else
+          @pointer.read_array_of_uint(length).join(".")
+        end
       end
 
       def node
@@ -62,7 +66,7 @@ module Net
       end
 
       def _packed
-        i = self.to_s.dip
+        i = self.to_s.dup
         i.sub!(/^\./,'')
         i.gsub!(/ /, '.0')
         i.replace(i.split('.').map(&:to_i).pack('N*'))

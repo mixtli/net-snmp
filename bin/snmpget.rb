@@ -25,6 +25,6 @@ sess = Net::SNMP::Session.new(:peername => host, :community => options[:communit
 pdu = sess.get(oid)
 
 pdu.varbinds.each do |v|
-  puts v.name
+  puts v.oid
   puts v.value
 end

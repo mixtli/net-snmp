@@ -182,24 +182,24 @@ module Net
 
       # Issue an SNMP GET Request.
       # See #send_pdu
-      def get(oidlist, &block)
+      def get(oidlist, options = {}, &block)
         pdu = PDU.new(Constants::SNMP_MSG_GET)
         oidlist = [oidlist] unless oidlist.kind_of?(Array)
         oidlist.each do |oid|
           pdu.add_varbind(:oid => oid)
         end
-        send_pdu(pdu, &block)
+        send_pdu(pdu, options, &block)
       end
 
       # Issue an SNMP GETNEXT Request
       # See #send_pdu
-      def get_next(oidlist, &block)
+      def get_next(oidlist, options = {}, &block)
         pdu = PDU.new(Constants::SNMP_MSG_GETNEXT)
         oidlist = [oidlist] unless oidlist.kind_of?(Array)
         oidlist.each do |oid|
           pdu.add_varbind(:oid => oid)
         end
-        send_pdu(pdu, &block)
+        send_pdu(pdu, options, &block)
       end
 
       # Issue an SNMP GETBULK Request
@@ -212,20 +212,21 @@ module Net
         end
         pdu.non_repeaters = options[:non_repeaters] || 0
         pdu.max_repetitions = options[:max_repetitions] || 10
-        send_pdu(pdu,&block)
+        send_pdu(pdu, options, &block)
       end
 
 
       # Issue an SNMP Set Request
       # See #send_pdu
-      def set(oidlist, &block)
+      def set(oidlist, options = {}, &block)
         pdu = PDU.new(Constants::SNMP_MSG_SET)
         oidlist.each do |oid|
           pdu.add_varbind(:oid => oid[0], :type => oid[1], :value => oid[2])
         end
-        send_pdu(pdu, &block)
+        send_pdu(pdu, options, &block)
       end
 
+      # Proxy getters to the C struct representing the session
       def method_missing(m, *args)
         if @struct.respond_to?(m)
           @struct.send(m, *args)
@@ -294,12 +295,12 @@ module Net
       # oid strings as keys.
       # XXX work in progress.   only works synchronously (except with EM + fibers).
       # Need to do better error checking and use getbulk when avaiable.
-      def walk(oidlist)
+      def walk(oidlist, options = {})
         oidlist = [oidlist] unless oidlist.kind_of?(Array)
         oidlist = oidlist.map {|o| o.kind_of?(OID) ? o : OID.new(o)}
         all_results = {}
         base_list = oidlist
-        while(!oidlist.empty? && pdu = get_next(oidlist))
+        while(!oidlist.empty? && pdu = get_next(oidlist, options))
           debug "==============================================================="
           debug "base_list = #{base_list}"
           prev_base = base_list.dup
@@ -348,9 +349,9 @@ module Net
       # the indexes as keys and hashes as values.
       #   puts sess.get_columns(['ifIndex', 'ifDescr']).inspect
       #   {'1' => {'ifIndex' => '1', 'ifDescr' => 'lo0'}, '2' => {'ifIndex' => '2', 'ifDescr' => 'en0'}}
-      def columns(columns)
+      def columns(columns, options = {})
         columns = columns.map {|c| c.kind_of?(OID) ? c : OID.new(c)}
-        walk_hash = walk(columns)
+        walk_hash = walk(columns, options)
         results = {}
         walk_hash.each do |k, v|
           oid = OID.new(k)
@@ -405,7 +406,10 @@ module Net
       #   rescue Net::SNMP::Error => e
       #     puts e.message
       #   end
-      def send_pdu(pdu, &callback)
+      def send_pdu(pdu, options = {},  &callback)
+        if options[:blocking]
+          return send_pdu_blocking(pdu)
+        end
         if block_given?
           @requests[pdu.reqid] = callback
           debug "calling async_send"
@@ -435,24 +439,28 @@ module Net
                 error "unknown operation #{op}"
             end
           else
-            response_ptr = FFI::MemoryPointer.new(:pointer)
-            if [Constants::SNMP_MSG_TRAP, Constants::SNMP_MSG_TRAP2].include?(pdu.command)
-              status = Wrapper.snmp_sess_send(@struct, pdu.pointer)
-              if status == 0
-                error("snmp_sess_send")
-              end
-            else
-              status = Wrapper.snmp_sess_synch_response(@struct, pdu.pointer, response_ptr)
-              unless status == Constants::STAT_SUCCESS
-                error("snmp_sess_synch_response", :status => status)
-              end
-            end
-            if [Constants::SNMP_MSG_TRAP, Constants::SNMP_MSG_TRAP2].include?(pdu.command)
-              1
-            else
-              PDU.new(response_ptr.read_pointer)
-            end
+            send_pdu_blocking(pdu)
           end
+        end
+      end
+
+      def send_pdu_blocking(pdu)
+        response_ptr = FFI::MemoryPointer.new(:pointer)
+        if [Constants::SNMP_MSG_TRAP, Constants::SNMP_MSG_TRAP2].include?(pdu.command)
+          status = Wrapper.snmp_sess_send(@struct, pdu.pointer)
+          if status == 0
+            error("snmp_sess_send")
+          end
+        else
+          status = Wrapper.snmp_sess_synch_response(@struct, pdu.pointer, response_ptr)
+          unless status == Constants::STAT_SUCCESS
+            error("snmp_sess_synch_response", :status => status)
+          end
+        end
+        if [Constants::SNMP_MSG_TRAP, Constants::SNMP_MSG_TRAP2].include?(pdu.command)
+          1
+        else
+          PDU.new(response_ptr.read_pointer)
         end
       end
 
