@@ -37,12 +37,21 @@ module Wrapper
     puts "---------------------VARBIND------------------------"
     puts %{
       name_length #{v.name_length}
-      name #{v.name.read_array_of_long(v.name_length).join(".")}
+      name #{read_oid(v.name, v.name_length)}
       type = #{v.type}
 
     }
   end
- # puts "Vardata size = #{NetsnmpVardata.size}"
+
+  def self.read_oid(oid_pointer, length)
+    if Net::SNMP::Inline.oid_size == 8
+      oid_pointer.read_array_of_ulong(length).join(".")
+    else
+      oid_pointer.read_array_of_uint(length).join(".")
+    end
+  end
+
+  # puts "Vardata size = #{NetsnmpVardata.size}"
   class VariableList < NiceFFI::Struct
     layout(
            :next_variable, :pointer,
@@ -56,9 +65,9 @@ module Wrapper
            :data, :pointer,
            :dataFreeHook, callback([ :pointer ], :void),
            :index, :int
-    )  
+    )
   end
-  
+
   #puts "VariableList size = #{VariableList.size}"
 
   def self.print_pdu(p)
@@ -76,7 +85,7 @@ module Wrapper
       print_varbind(var)
       v = var.next_variable
     end
-    
+
   end
   class SnmpPdu < NiceFFI::Struct
     layout(
@@ -299,7 +308,7 @@ module Wrapper
   attach_function :snmp_pdu_type, [ :int ], :string
 
 
-  
+
   attach_function :asn_check_packet, [ :pointer, :uint ], :int
   attach_function :asn_parse_int, [ :pointer, :pointer, :pointer, :pointer, :uint ], :pointer
   attach_function :asn_build_int, [ :pointer, :pointer, :u_char, :pointer, :uint ], :pointer
@@ -338,7 +347,7 @@ module Wrapper
   attach_function :snmp_api_errstring, [ :int ], :string
   attach_function :snmp_perror, [ :string ], :void
   attach_function :snmp_set_detail, [ :string ], :void
-  
+
   attach_function :snmp_select_info, [:pointer, :pointer, :pointer, :pointer], :int
   attach_function :snmp_read, [:pointer], :void
   attach_function :generate_Ku, [:pointer, :int, :string, :int, :pointer, :pointer], :int
@@ -362,7 +371,7 @@ module Wrapper
   def self.get_fd_set
     FFI::MemoryPointer.new(:pointer, 128)
   end
-  
+
 
 end
 end
