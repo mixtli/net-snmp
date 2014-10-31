@@ -78,16 +78,13 @@ module Net
 
       def self.oid_size
         unless @@oid_size
-          # 32 bytes to parse into... should be plenty
-          oid_ptr = FFI::MemoryPointer.new(32)
+          oid_ptr = FFI::MemoryPointer.new(:ulong, 4)
           length_ptr = FFI::MemoryPointer.new(:size_t, 1)
-          length_ptr.write_int(4)
+          length_ptr.write_int(oid_ptr.total)
 
           Wrapper.read_objid('1.1', oid_ptr, length_ptr)
-          oid_str = oid_ptr.read_array_of_uint8(8).map{|byte| byte.to_s(2).rjust(9, '0') }.join('')
+          oid_str = oid_ptr.read_array_of_uint8(16).map{|byte| byte.to_s(2).rjust(8, '0') }.join('')
 
-          # First sub-id is encoded in one byte, even when oid_size is u_long (4 bytes)
-          # So, count bytes between first and second sub-id
           @@oid_size = (oid_str[/10*1/].length - 1) / 8
         end
         @@oid_size
