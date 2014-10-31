@@ -57,12 +57,10 @@ describe "Net::SNMP::Wrapper" do
       sess = Net::SNMP::Wrapper.snmp_open(@session.pointer)
       Net::SNMP::Wrapper.snmp_send(sess.pointer, @pdu)
       sleep 1
-      fdset = FFI::MemoryPointer.new(:pointer, Net::SNMP::Inline.fd_setsize / 8)
+      fdset = FFI::MemoryPointer.new(1024 * 8)
       fds = FFI::MemoryPointer.new(:int)
-      #fds.autorelease = false
       tval = Net::SNMP::Wrapper::TimeVal.new
       block = FFI::MemoryPointer.new(:int)
-      #block.autorelease = false
       block.write_int(1)
       Net::SNMP::Wrapper.snmp_select_info(fds, fdset, tval.pointer, block )
       FFI::LibC.select(fds.read_int, fdset, nil, nil, nil)

@@ -1,7 +1,7 @@
 require 'forwardable'
 require 'nice-ffi'
 require 'fiber'
-%w( snmp snmp/debug snmp/wrapper snmp/version snmp/inline snmp/constants snmp/utility snmp/oid snmp/error snmp/pdu snmp/session snmp/trap_session snmp/varbind snmp/mib snmp/mib/node snmp/dispatcher).each do |f|
+%w( snmp snmp/debug snmp/wrapper snmp/version snmp/constants snmp/utility snmp/oid snmp/error snmp/pdu snmp/session snmp/trap_session snmp/varbind snmp/mib snmp/mib/node snmp/dispatcher).each do |f|
   require "#{File.dirname(__FILE__)}/net/#{f}"
 end
 

@@ -37,7 +37,7 @@ module Net
         # * +context+ - SNMPv3 only.
         # * +username+ - SNMPv3 only.
         # * +auth_password+ - SNMPv3 only.
-        # * +priv_password+ - SNMPv3 only.  
+        # * +priv_password+ - SNMPv3 only.
         # Returns:
         # Net::SNMP::Session
         def open(options = {})
@@ -107,7 +107,7 @@ module Net
               when nil
                 OID.new("1.3.6.1.6.3.10.1.2.1").pointer
           end
-          
+
           @sess.securityAuthProtoLen = 10
           @sess.securityAuthKeyLen = Constants::USM_AUTH_KU_LEN
 
@@ -247,7 +247,7 @@ module Net
         err.print
         raise err, msg
       end
-      
+
 
       # Check the session for SNMP responses from asynchronous SNMP requests
       # This method will check for new responses and call the associated
@@ -257,7 +257,15 @@ module Net
       # the number of seconds to block.
       # Returns the number of file descriptors handled.
       def select(timeout = nil)
-          fdset = FFI::MemoryPointer.new(:pointer, Net::SNMP::Inline.fd_setsize / 8)
+          if @fdset
+            # Re-use the same fd set buffer to avoid
+            # multiple allocation overhead.
+            @fdset.clear
+          else
+            # 8K should be plenty of space
+            @fdset = FFI::MemoryPointer.new(1024 * 8)
+          end
+
           num_fds = FFI::MemoryPointer.new(:int)
           tv_sec = timeout ? timeout.round : 0
           tv_usec = timeout ? (timeout - timeout.round) * 1000000 : 0
@@ -269,13 +277,13 @@ module Net
             block.write_int(1)
           end
 
-          Wrapper.snmp_sess_select_info(@struct, num_fds, fdset, tval.pointer, block )
+          Wrapper.snmp_sess_select_info(@struct, num_fds, @fdset, tval.pointer, block )
           tv = (timeout == false ? nil : tval)
           #debug "Calling select #{Time.now}"
-          num_ready = FFI::LibC.select(num_fds.read_int, fdset, nil, nil, tv)
+          num_ready = FFI::LibC.select(num_fds.read_int, @fdset, nil, nil, tv)
           #debug "Done select #{Time.now}"
           if num_ready > 0
-            Wrapper.snmp_sess_read(@struct, fdset)
+            Wrapper.snmp_sess_read(@struct, @fdset)
           elsif num_ready == 0
             Wrapper.snmp_sess_timeout(@struct)
           elsif num_ready == -1
@@ -527,5 +535,3 @@ module Net
     end
   end
 end
-
-

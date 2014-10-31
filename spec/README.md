@@ -12,6 +12,19 @@ Latest Results
 Generated with `rspec -f d -o spec/spec.txt --no-color`
 
 ```
+async
+  version 1
+    get should work
+    get should return an error
+    getnext should work
+  version 2
+    get should work
+    getnext should work
+  version 3
+    should get async using snmpv3
+    get should work
+    getnext should work
+
 em
   should work in event_machine
 
@@ -36,6 +49,7 @@ Net::SNMP::MIB::Node
 Net::SNMP::OID
   should instantiate valid oid with numeric
   should instantiate valid oid with string
+  should to_s correctly
 
 synchronous calls
   version 1
@@ -86,6 +100,6 @@ Pending:
     # still working on it
     # ./spec/trap_spec.rb:26
 
-Finished in 23 seconds (files took 0.42074 seconds to load)
-38 examples, 0 failures, 4 pending
+Finished in 25.41 seconds (files took 0.38735 seconds to load)
+47 examples, 0 failures, 4 pending
 ```
