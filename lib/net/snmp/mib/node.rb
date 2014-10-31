@@ -4,7 +4,7 @@ module Net::SNMP
       extend Forwardable
       attr_accessor :struct
       def_delegators :struct, :label, :type, :access, :status
-      
+
       class << self
         def get_node(oid)
           if oid.kind_of?(String)
@@ -14,8 +14,9 @@ module Net::SNMP
           new(struct.pointer)
         end
       end
-      
+
       def initialize(arg)
+        @oid = nil
         case arg
         when FFI::Pointer
           @struct = Wrapper::Tree.new(arg)
@@ -38,12 +39,12 @@ module Net::SNMP
         return nil unless @struct.next_peer
         self.class.new(@struct.next_peer)
       end
-      
+
       def parent
         return nil unless @struct.parent
         self.class.new(@struct.parent)
       end
-      
+
       def children
         return nil unless @struct.child_list
         child = self.class.new(@struct.child_list)
@@ -54,11 +55,11 @@ module Net::SNMP
         children.pop
         children.reverse  # For some reason, net-snmp returns everything backwards
       end
-      
+
       def siblings
         parent.children
       end
-      
+
     end
   end
 end

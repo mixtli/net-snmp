@@ -20,9 +20,7 @@ describe "snmp errors" do
         Net::SNMP::Dispatcher.fiber_loop
         Net::SNMP::Session.open(:peername => 'www.yahoo.com') do |sess|
           begin
-            puts "sending get pdu"
             sess.get("sysDescr.0")
-            puts "done sess.get"
           rescue Net::SNMP::TimeoutError => e
             got_error = true
           end
@@ -30,7 +28,7 @@ describe "snmp errors" do
         EM.stop
       }.resume(nil)
     }
-    got_error.should be_true        
+    got_error.should eq(true)
   end
 
 end

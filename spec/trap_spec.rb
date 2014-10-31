@@ -5,16 +5,16 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 describe "snmp traps" do
   it "should send a v1 trap" do
     #pending "still working on it"
-    Net::SNMP::TrapSession.open(:peername => '127.0.0.1') do |sess|
+    Net::SNMP::TrapSession.open(:peername => 'localhost', :version => '1', :community => 'public') do |sess|
       res = sess.trap
-      res.should be_true
+      res.should eq(true)
     end
   end
 
   it "should send a v2 inform" do
     pending "still working on it"
     did_callback = false
-    Net::SNMP::TrapSession.open(:peername => '127.0.0.1', :version => '2c') do |sess|
+    Net::SNMP::TrapSession.open(:peername => 'localhost', :version => '2c') do |sess|
       sess.inform(:oid => 'coldStart.0') do |op, res|
         did_callback = true
       end
@@ -25,7 +25,7 @@ describe "snmp traps" do
 
   it "should send v2 trap" do
     pending "still working on it"
-    Net::SNMP::TrapSession.open(:peername => '127.0.0.1', :version => '2c') do |sess|
+    Net::SNMP::TrapSession.open(:peername => 'localhost', :version => '2c') do |sess|
       res = sess.trap_v2(:oid => 'warmStart.0')
       res.should be_true
     end

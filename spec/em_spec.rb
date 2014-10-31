@@ -2,7 +2,6 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'eventmachine'
 
 describe "em" do
-  
   it "should work in event_machine" do
     did_callback = false
     EM.run do
@@ -16,11 +15,9 @@ describe "em" do
       end
 
       EM.add_timer(3) do
-        did_callback.should be_true
+        did_callback.should eq(true)
         EM.stop
       end
     end
   end
-
-
 end
