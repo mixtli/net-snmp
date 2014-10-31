@@ -84,7 +84,7 @@ module Net
           length_ptr.write_int(4)
 
           Wrapper.read_objid('1.1', oid_ptr, length_ptr)
-          oid_str = oid_ptr.read_array_of_uint8(8).map{|byte| byte.to_s(2).rjust(9, '0') }.join('')
+          oid_str = oid_ptr.read_array_of_uint8(8).map{|byte| byte.to_s(2).rjust(8, '0') }.join('')
 
           # First sub-id is encoded in one byte, even when oid_size is u_long (4 bytes)
           # So, count bytes between first and second sub-id
