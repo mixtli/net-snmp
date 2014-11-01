@@ -70,7 +70,7 @@ module Net::SNMP
       end
 
       def peers
-        [] if oid.to_s == '1'
+        return [] if oid.to_s == '1'
         parent.children.reject { |n| n.oid.to_s == oid.to_s }
       end
       alias siblings peers
