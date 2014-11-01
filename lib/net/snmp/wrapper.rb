@@ -129,6 +129,7 @@ module Wrapper
 
     }
   end
+
   class SnmpSession < NiceFFI::Struct
     layout(
            :version, :long,
@@ -181,11 +182,20 @@ module Wrapper
            :myvoid, :pointer
     )
   end
+
+  class EnumList < NiceFFI::Struct
+    layout(
+      :next, EnumList.typed_pointer,
+      :value, :int,
+      :label, :pointer
+    )
+  end
+
   class Tree < NiceFFI::Struct
     layout(
-      :child_list, :pointer,
-      :next_peer, :pointer,
-      :next, :pointer,
+      :child_list, Tree.typed_pointer,
+      :next_peer, Tree.typed_pointer,
+      :next, Tree.typed_pointer,
       :parent, :pointer,
       :label, :string,
       :subid, :u_long,
@@ -196,7 +206,7 @@ module Wrapper
       :type, :int,
       :access, :int,
       :status, :int,
-      :enums, :pointer,
+      :enums, EnumList.typed_pointer,
       :ranges, :pointer,
       :indexes, :pointer,
       :augments, :pointer,
@@ -211,11 +221,12 @@ module Wrapper
       :defaultValue, :pointer
     )
   end
+
   class IndexList < NiceFFI::Struct
     layout(
-        :next, :pointer,
-        :ilabel, :pointer,
-        :isimplied, :char
+      :next, :pointer,
+      :ilabel, :pointer,
+      :isimplied, :char
     )
   end
 

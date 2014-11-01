@@ -15,12 +15,12 @@ describe Net::SNMP::MIB::Node do
     node = Net::SNMP::MIB::Node.get_node("ifTable")
     if_entry = node.children.first
     if_entry.label.should eql("ifEntry")
-    if_entry.children.first.label.should eql("ifIndex")
+    if_entry.children.should include { |n| n.label == "ifIndex" }
   end
 
   it "should get siblings" do
     node = Net::SNMP::MIB::Node.get_node("sysDescr")
-    node.siblings.should include{|n| n.label == "sysName"}
+    node.siblings.should include { |n| puts "TESTING #{n.label}"; n.label == "sysName" }
   end
 
   it "should get oid" do

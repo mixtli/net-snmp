@@ -1,3 +1,11 @@
+# Responsibility:
+#  - Manages the request/response cycle for incoming messages
+#    + Listens for incoming requests
+#    + Parses request packets into Message objects
+#    + Dispatches the messages to (sub) Agents
+#    + Serializes the response from the subagents and sends it to the caller
+
+require 'singleton'
 require 'timeout'
 require 'pp'
 
@@ -8,15 +16,11 @@ Provider = Struct.new(:oid, :block)
 
 class Agent
   include Debug
+  include Singleton
 
   attr_accessor :port, :socket, :packet
 
-  def initialize(port = 161, max_packet_size = 65_000)
-    @socket = UDPSocket.new
-    @socket.bind("127.0.0.1", port)
-    @max_packet_size = max_packet_size
-    @killed = false
-
+  def initialize
     # Contains blocks specified by the client to handle
     # get requests on mib subtrees
     @get_providers = []
@@ -24,35 +28,21 @@ class Agent
     # Contains blocks specified by the client to handle
     # set requests on mib subtrees
     @set_providers = []
+
+    # Set by `stop` (probably in an INT signal handler) to
+    # indicate that the agent should stop
+    @killed = false
   end
 
-  def time(label, &block)
-    t_start = Time.now
-    block[]
-    t_end = Time.now
-    info "#{label}: #{(t_end - t_start)*1000}ms"
+  def start(port = 161, interval = 2, max_packet_size = 65_000)
+    @interval = interval
+    @socket = UDPSocket.new
+    @socket.bind("127.0.0.1", port)
+    @max_packet_size = max_packet_size
+    run_loop
   end
-
-  def start(interval = 2)
-    packet = nil
-    loop {
-      begin
-        return if @killed
-        timeout(interval) do
-          @packet = @socket.recvfrom(@max_packet_size)
-        end
-        return if @killed
-        time "Overall Response Time" do
-          message = Message.parse(@packet)
-          response_pdu = process_message(message)
-          session = make_response_session_for_message(message)
-          Wrapper.snmp_send(session.pointer, response_pdu.pointer).to_s
-        end
-      rescue Timeout::Error => timeout
-        next
-      end
-    }
-  end
+  alias listen start
+  alias run start
 
   def stop
     @killed = true
@@ -74,6 +64,28 @@ class Agent
 
   private
 
+  def run_loop
+    packet = nil
+    loop {
+      begin
+        return if @killed
+        timeout(@interval) do
+          @packet = @socket.recvfrom(@max_packet_size)
+        end
+        return if @killed
+        time "Overall Response Time" do
+          message = Message.parse(@packet)
+          response_pdu = process_message(message)
+          session = make_response_session_for_message(message)
+          Wrapper.snmp_send(session.pointer, response_pdu.pointer)
+          Wrapper.snmp_sess_close(session)
+        end
+      rescue Timeout::Error => timeout
+        next
+      end
+    }
+  end
+
   def process_message(message)
     case message.pdu.command
     when Constants::SNMP_MSG_GET
@@ -86,17 +98,20 @@ class Agent
   def proccess_get(message)
     response_pdu = make_response_pdu_for_message(message)
     message.pdu.varbinds.each do |vb|
-      value = Constants::SNMP_NOSUCHOBJECT
-      provider = @get_providers.first { |p| vb.oid.start_with? p.oid }
-      value = provider.block.call(vb.oid) if provider
-      response_pdu.add_varbind(oid: vb.oid, value: value)
+      provider = @get_providers.find { |p| vb.oid.to_s.start_with? p.oid }
+      if provider
+        value = provider.block.call(vb.oid)
+        response_pdu.add_varbind(oid: vb.oid, value: value)
+      else
+        response_pdu.add_varbind(oid: vb.oid, type: Constants::SNMP_NOSUCHOBJECT)
+      end
     end
     response_pdu
   end
 
-  # def proccess_set(message)
-  #   response_pdu = make_response_pdu_for_message(message)
-  # end
+  def proccess_set(message)
+    response_pdu = make_response_pdu_for_message(message)
+  end
 
   def copy_varbinds(from_pdu, to_pdu)
     from_pdu.varbinds.each do |vb|

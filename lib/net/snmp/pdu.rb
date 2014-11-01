@@ -1,4 +1,4 @@
-module Net 
+module Net
   module SNMP
     class PDU
       # == Represents an SNMP PDU
@@ -36,28 +36,38 @@ module Net
         end
       end
 
-      # For getbulk requests, repeaters and maxreps are stored in errstat and errindex
-      def non_repeaters=(nr)
-        @struct.errstat = nr
-      end
+      # Specifies the number of non-repeating, regular objects at the start of
+      # the variable list in the request.
+      # (For getbulk requests, non-repeaters is stored in errstat)
       def non_repeaters
         @struct.errstat
       end
+
+      def non_repeaters=(nr)
+        @struct.errstat = nr
+      end
+
+      # The number of iterations in the table to be read for the repeating
+      # objects that follow the non-repeating objects.
+      # (For getbulk requests, max-repititions are stored in errindex)
       def max_repetitions=(mr)
         @struct.errindex = mr
       end
+
       def max_repetitions
         @struct.errindex
       end
+
       def enterprise=(e_oid)
         @enterprise = e_oid
         @struct.enterprise = e_oid.pointer
         @struct.enterprise_length = e_oid.size
       end
+
       def enterprise
         @enterprise
       end
-      
+
       def agent_addr=(addr)
         @struct.agent_addr = addr.split('.').pack("CCCC")
         @agent_addr = addr
@@ -66,7 +76,6 @@ module Net
       def agent_addr
         @agent_addr
       end
-
 
       def method_missing(m, *args)
         if @struct.respond_to?(m)
@@ -97,24 +106,36 @@ module Net
 
         value = options[:value]
         value_len = case options[:type]
-          when Constants::ASN_NULL
-            0
-          else
-            options[:value].size
+        when Constants::ASN_NULL,
+            Constants::SNMP_NOSUCHOBJECT,
+            Constants::SNMP_NOSUCHINSTANCE,
+            Constants::SNMP_ENDOFMIBVIEW
+          0
+        else
+          options[:value].size
         end
 
         value = case options[:type]
-          when Constants::ASN_INTEGER, Constants::ASN_GAUGE, Constants::ASN_COUNTER, Constants::ASN_TIMETICKS, Constants::ASN_UNSIGNED
+          when Constants::ASN_INTEGER,
+              Constants::ASN_GAUGE,
+              Constants::ASN_COUNTER,
+              Constants::ASN_TIMETICKS,
+              Constants::ASN_UNSIGNED
             new_val = FFI::MemoryPointer.new(:long)
             new_val.write_long(value)
             new_val
-          when Constants::ASN_OCTET_STR, Constants::ASN_BIT_STR, Constants::ASN_OPAQUE
+          when Constants::ASN_OCTET_STR,
+              Constants::ASN_BIT_STR,
+              Constants::ASN_OPAQUE
             value
           when Constants::ASN_IPADDRESS
             # TODO
           when Constants::ASN_OBJECT_ID
             value.pointer
-          when Constants::ASN_NULL
+          when Constants::ASN_NULL,
+              Constants::SNMP_NOSUCHOBJECT,
+              Constants::SNMP_NOSUCHINSTANCE,
+              Constants::SNMP_ENDOFMIBVIEW
             nil
           else
             if value.respond_to?(:pointer)

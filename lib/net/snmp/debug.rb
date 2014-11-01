@@ -21,6 +21,13 @@ module Debug
     Debug.logger.fatal msg if Debug.logger
   end
 
+  def time(label, &block)
+    t_start = Time.now
+    block[]
+    t_end = Time.now
+    info "#{label}: #{(t_end - t_start)*1000}ms"
+  end
+
   def print_packet(packet)
     byte_string = (packet.kind_of?(Array) ? packet[0] : packet)
 
