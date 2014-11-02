@@ -2,8 +2,13 @@ module Net
   module SNMP
     class TrapSession < Session
       # == Represents a session for sending SNMP traps
+
+      # +options+
+      # * :peername The address where the trap will be sent
+      # * :port     The port where the trap will be sent (default = 162)
       def initialize(options = {})
-        options[:peername] = "#{options[:peername]}:162"
+        port = options[:port] || 162
+        options[:peername] = "#{options[:peername]}:#{port}"
         super(options)
       end
 
