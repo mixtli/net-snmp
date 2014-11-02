@@ -22,6 +22,23 @@ default_template = '
 <% end -%>
 '.sub!("\n", "") # Remove leading newline
 
+json_template = '
+[
+<% nodes.each_with_index { |node, index| -%>
+<%= ",\n" if index > 0 -%>
+  {
+    "name": "<%= node.module.nil? ? "" : "#{node.module.name}::" %><%= node.label %>",
+    "oid": "<%= node.oid %>",
+    "type": <%= node.type %>,
+<% if node.enums && node.enums.count > 0 -%>
+    "enums": { <%= node.enums.map { |enum| "\"#{enum[:label]}\": #{enum[:value]}" }.join(", ") %> },
+<% end -%>
+    "parent": <%= node.parent ? %Q["#{node.parent.oid}"] : "undefined" %>
+  }<% } -%>
+
+]
+'.sub!("\n", "")
+
 usage = <<USAGE
 Usage: mib2rb [OPTION]... ROOT_NODE [ERB_FILE]
 
@@ -43,8 +60,15 @@ Options
 
                Values:   debug, info, warn, error, fatal, none
                Default:  none
-               Alieases: --log-level
+               Aliases:  --log-level
 
+  -f FORMAT    Select the output format.
+               If this option is supplied with an ERB file,
+               the option is ignored and the file is used instead.
+
+               Values:   [d]efault, [j]son
+               Default:  default
+               Aliases:  --format
 
 Arguments
   ROOT_NODE    [Required] The root node of the mib tree to translate.
@@ -55,11 +79,14 @@ Arguments
                Default:  Builtin template specifying human readable output.
                          (See below)
 
-Default ERB_FILE Contents:
+Default ERB_FILE Template:
 
 #{default_template.each_line.map { |l| "  #{l}" }.join}
 
 USAGE
+
+root_node = nil
+erb_template = nil
 
 optparse = OptionParser.new do|opts|
   opts.on( '-h', '--help') do
@@ -89,18 +116,31 @@ optparse = OptionParser.new do|opts|
         exit(1)
     end
   end
+
+  opts.on('-f', '--format FORMAT') do |format|
+    case format
+    when /^d(efault)?$/i
+      erb_template = default_template
+    when /^j(son)?$/i
+      erb_template = json_template
+    else
+      puts "Invalid format: #{format}"
+      puts
+      puts usage
+      exit(1)
+    end
+  end
+
 end
 optparse.parse!
-
-root_node = nil
-erb_template = nil
 
 case ARGV.length
 when 1
   root_node = Net::SNMP::MIB.get_node(ARGV[0])
-  erb_template = default_template
+  # If format wasn't set by -f option, default it here
+  erb_template ||= default_template
 when 2
-  root_node = et::SNMP::MIB.get_node(ARGV[0])
+  root_node = Net::SNMP::MIB.get_node(ARGV[0])
   erb_template = File.read(ARGV[1])
 else
   puts "Invalid arguments..."
