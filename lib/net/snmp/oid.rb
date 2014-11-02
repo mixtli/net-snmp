@@ -1,9 +1,12 @@
 module Net
   module SNMP
     class OID
+      extend Debug
+      include Debug
+
       attr_reader :oid, :pointer, :length_pointer
-      @@oid_size = nil
-      @@sub_id_bit_width = nil
+      @oid_size = nil
+      @sub_id_bit_width = nil
 
       def self.from_pointer(ptr, sub_id_count)
         OID.new(OID.read_pointer(ptr, sub_id_count))
@@ -77,7 +80,14 @@ module Net
       end
 
       def self.oid_size
-        unless @@oid_size
+        unless @oid_size
+          determine_oid_size
+        end
+        @oid_size
+      end
+
+      def self.determine_oid_size
+        if Net::SNMP.initialized?
           oid_ptr = FFI::MemoryPointer.new(:ulong, 8)
           length_ptr = FFI::MemoryPointer.new(:size_t, 1)
           length_ptr.write_int(oid_ptr.total)
@@ -85,16 +95,22 @@ module Net
           Wrapper.read_objid('1.1', oid_ptr, length_ptr)
           oid_str = oid_ptr.read_array_of_uint8(oid_ptr.total).map{|byte| byte.to_s(2).rjust(8, '0') }.join('')
 
-          @@oid_size = (oid_str[/10*1/].length - 1) / 8
+          @oid_size = (oid_str[/10*1/].length - 1) / 8
+        else
+          @oid_size = FFI::MemoryPointer.new(:ulong).total
+          warn "SNMP not initialized\n" + <<-WARNING
+            Cannot determine OID sub-id size, assuming common case of sizeof(ulong)
+            On this platform, sizeof(ulong) = #{@oid_size} bytes
+            To avoid this warning, call `Net::SNMP.init`
+            WARNING
         end
-        @@oid_size
       end
 
       def self.read_pointer(pointer, sub_id_count)
-        unless @@sub_id_bit_width
-          @@sub_id_bit_width = OID.oid_size * 8
+        unless @sub_id_bit_width
+          @sub_id_bit_width = OID.oid_size * 8
         end
-        pointer.send("read_array_of_uint#{@@sub_id_bit_width}", sub_id_count).join('.')
+        pointer.send("read_array_of_uint#{@sub_id_bit_width}", sub_id_count).join('.')
       end
     end
   end

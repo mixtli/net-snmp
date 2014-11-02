@@ -18,6 +18,7 @@ require 'logger'
   snmp/varbind
   snmp/mib
   snmp/mib/node
+  snmp/mib/module
   snmp/dispatcher
   snmp/agent
   snmp/message

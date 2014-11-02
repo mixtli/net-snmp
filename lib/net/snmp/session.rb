@@ -492,7 +492,9 @@ module Net
       def print_errors
         puts "errno: #{errno}, snmp_err: #{@snmp_err}, message: #{@snmp_msg}"
       end
+
       private
+
       def sess_callback
         @sess_callback ||= FFI::Function.new(:int, [:int, :pointer, :int, :pointer, :pointer]) do |operation, session, reqid, pdu_ptr, magic|
           debug "in callback #{operation.inspect} #{session.inspect}"
@@ -521,6 +523,7 @@ module Net
           end
         end
       end
+
       def get_error
           errno_ptr = FFI::MemoryPointer.new(:int)
           snmp_err_ptr = FFI::MemoryPointer.new(:int)
@@ -530,7 +533,6 @@ module Net
           @snmp_err = snmp_err_ptr.read_int
           @snmp_msg = msg_ptr.read_pointer.read_string
       end
-
 
     end
   end

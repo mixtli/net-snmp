@@ -1,10 +1,12 @@
+# Ruby api to the Wrapper::Tree class (represents netsnmp's `struct tree`)
+
 module Net::SNMP
   module MIB
     class Node
       include Debug
       extend Forwardable
-      attr_accessor :struct
-      def_delegators :struct, :label, :type, :access, :status
+      attr_accessor :struct, :is_in_mib
+      def_delegators :struct, :label, :type, :access, :status, :modid, :subid
 
       class << self
         include Debug
@@ -13,13 +15,15 @@ module Net::SNMP
             oid = OID.new(oid)
           end
           struct = Wrapper.get_tree(oid.pointer, oid.length_pointer.read_int, Wrapper.get_tree_head().pointer)
-          warn "OID #{oid.to_s} not found in MIB" if struct.parent.null? && oid.to_s != '1'
-          new(struct.pointer)
+          node = new(struct.pointer)
+          warn "OID #{oid.to_s} not found in MIB" unless node.in_mib?
+          node
         end
       end
 
       def initialize(arg)
         @oid = nil
+        @module = nil
         case arg
         when Wrapper::Tree
           @struct = arg
@@ -28,6 +32,22 @@ module Net::SNMP
         else
           raise "invalid type"
         end
+      end
+
+      def exists_in_mib?
+        # The structure can be created without the oid actually
+        # existing in the mib, but the parent will be null.
+        # Of course, the parent is null for the root node as well,
+        # so ignore that case.
+        (!@struct.parent.null?) || oid.to_s == '1'
+      end
+      alias in_mib? exists_in_mib?
+
+      def module
+        unless @module
+          @module = Module.find(modid)
+        end
+        @module
       end
 
       def description
@@ -66,6 +86,19 @@ module Net::SNMP
         yield child
         while child = child.next_peer
           yield child
+        end
+      end
+
+      # Depth-first traversal of all descendants
+      def descendants(&block)
+        return to_enum __method__ unless block_given?
+        return if @struct.child_list.null?
+        child = self.class.new(@struct.child_list)
+        block[child]
+        child.descendants(&block)
+        while child = child.next_peer
+          block[child]
+          child.descendants(&block)
         end
       end
 

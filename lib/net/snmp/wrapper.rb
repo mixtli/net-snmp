@@ -191,6 +191,32 @@ module Wrapper
     )
   end
 
+  class IndexList < NiceFFI::Struct
+    layout(
+      :next, :pointer,
+      :ilabel, :pointer,
+      :isimplied, :char
+    )
+  end
+
+  class ModuleImport < NiceFFI::Struct
+    layout(
+      :label, :pointer, # The descriptor being imported (pointer to string)
+      :modid, :int # The module id
+    )
+  end
+
+  class Module < NiceFFI::Struct
+    layout(
+      :name, :pointer, # The module's name (pointer to string)
+      :file, :pointer, # The file containing the module (pointer to string)
+      :imports, ModuleImport.typed_pointer, # List of descriptors being imported
+      :no_imports, :int, # The length of the imports array
+      :modid, :int, # The index number of this module
+      :next, Module.typed_pointer # Linked list pointer
+    )
+  end
+
   class Tree < NiceFFI::Struct
     layout(
       :child_list, Tree.typed_pointer,
@@ -200,15 +226,15 @@ module Wrapper
       :label, :string,
       :subid, :u_long,
       :modid, :int,
-      :number_modules, :int,
-      :module_list, :pointer,
+      :number_modules, :int,  # Length of module_list array
+      :module_list, :pointer, # Array of modids (pointer to int)
       :tc_index, :int,
       :type, :int,
       :access, :int,
       :status, :int,
       :enums, EnumList.typed_pointer,
       :ranges, :pointer,
-      :indexes, :pointer,
+      :indexes, IndexList.typed_pointer,
       :augments, :pointer,
       :varbinds, :pointer,
       :hint, :pointer,
@@ -222,23 +248,16 @@ module Wrapper
     )
   end
 
-  class IndexList < NiceFFI::Struct
-    layout(
-      :next, :pointer,
-      :ilabel, :pointer,
-      :isimplied, :char
-    )
-  end
-
   # Some of these functions/variables are not available on windows.
   # (At least with my current setup.) Simple SNMP manager example
   # seems to work fine without them, so just log and ignore for now.
   class << self
+    include Net::SNMP::Debug
     alias af attach_function
     def attach_function(*args)
       af(*args)
     rescue Exception => ex
-      puts ex.message
+      debug ex.message
     end
   end
 
@@ -368,6 +387,11 @@ module Wrapper
 
   attach_function :get_tree_head, [], Tree.typed_pointer
   attach_function :get_tree, [:pointer, :int, :pointer], Tree.typed_pointer
+
+  # struct module  *find_module(int modid);
+  attach_function :find_module, [:int], Module.typed_pointer
+
+  # Trap functions
   attach_function :send_easy_trap, [:int, :int], :void
   attach_function :send_trap_vars, [:int, :int, :pointer], :void
   attach_function :send_v2trap, [:pointer], :void
@@ -398,18 +422,19 @@ module FFI
     # (At least with my current setup.) Simple SNMP manager example
     # seems to work fine without them, so just log and ignore for now.
     class << self
+      include Net::SNMP::Debug
       alias af attach_function
       def attach_function(*args)
         af(*args)
       rescue Exception => ex
-        puts ex.message
+        debug ex.message
       end
 
       alias av attach_variable
       def attach_variable(*args)
         av(*args)
       rescue Exception => ex
-        puts ex.message
+        debug ex.message
       end
     end
 
