@@ -7,9 +7,8 @@ require 'logger'
 Net::SNMP.init
 
 default_template = '
-<% nodes = [root] + root.descendants.to_a -%>
 <% nodes.each do |node| -%>
-<%= root.module.nil? ? "" : "#{root.module.name}::" %><%= root.label %>
+<%= node.module.nil? ? "" : "#{node.module.name}::" %><%= node.label %>
   - oid:       <%= node.oid %>
   - type:      <%= node.type %>
   - file:      <%= node.module.file unless node.module.nil? %>
@@ -28,6 +27,9 @@ Usage: mib2rb [OPTION]... ROOT_NODE [ERB_FILE]
 
 Description
   Prints a mib subtree according to the ERB_FILE.
+  Within the ERB file, the `root` variable contains the
+  Net::SNMP::Node object corresponding to ROOT_NODE, and
+  `nodes` is a collection of the root & all descendants.
 
 Options
   -h,          Prints this usage information.
@@ -49,15 +51,11 @@ Arguments
                May be specified as numeric oid or mib name.
 
   ERB_FILE     [Optional] The template file to use for output.
-               Within the erb file, the `node` variable is the root
-               node specified by ROOT_NODE as a Net::SNMP::Node object.
-               This can be used to traverse the mib subtree using
-               `node.children` recursively.
 
                Default:  Builtin template specifying human readable output.
                          (See below)
 
-Example ERB_FILE Contents:
+Default ERB_FILE Contents:
 
 #{default_template.each_line.map { |l| "  #{l}" }.join}
 
@@ -113,6 +111,7 @@ end
 
 def render(node, erb_template)
   root = node
+  nodes = [root] + root.descendants.to_a
   erb = ERB.new(erb_template, nil, '-')
   puts erb.result binding
 end
