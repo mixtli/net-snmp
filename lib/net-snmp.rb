@@ -20,7 +20,10 @@ require 'logger'
   snmp/mib/node
   snmp/mib/module
   snmp/dispatcher
-  snmp/agent
+  snmp/agent/agent
+  snmp/agent/provider
+  snmp/agent/request_context
+  snmp/agent/request_dispatcher
   snmp/message
 ).each do |f|
   require "#{File.dirname(__FILE__)}/net/#{f}"

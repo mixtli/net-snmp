@@ -17,6 +17,7 @@ module Net
       def object_type
         @struct.type
       end
+      alias type object_type
 
       # Returns the OID associated with the varbind
       def oid

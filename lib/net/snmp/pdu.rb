@@ -157,6 +157,21 @@ module Net
         self.errstat != 0
       end
 
+      # Sets the pdu errstat
+      def error=(value)
+        @struct.errstat = value
+      end
+      # Accept the name from the struct
+      alias errstat= error=
+      # Accept the fully spelled out version
+      alias error_status= error=
+
+      def error_index=(index)
+        @struct.errindex = index
+      end
+      # Accept the name from the struct
+      alias errindex= error_index=
+
       # A descriptive error message
       def error_message
         Wrapper::snmp_errstring(self.errstat)
@@ -165,6 +180,7 @@ module Net
       def print_errors
         puts "errstat = #{self.errstat}, index = #{self.errindex}, message = #{self.error_message}"
       end
+
       # Free the pdu
       def free
         Wrapper.snmp_free_pdu(@struct.pointer)

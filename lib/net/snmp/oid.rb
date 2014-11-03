@@ -50,6 +50,10 @@ module Net
         OID.read_pointer(@pointer, length)
       end
 
+      # Gets the MIB node corresponding to this OID.
+      # Note that if this OID represents a MIB node, like '1.3',
+      # then `oid.to_s == oid.node.oid.to_s`. However, if there
+      # are indices on this oid, then `oid.to_s.start_with?(oid.node.oid.to_s)`
       def node
         MIB::Node.get_node(oid)
       end

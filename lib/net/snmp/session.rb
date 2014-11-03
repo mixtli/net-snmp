@@ -64,18 +64,14 @@ module Net
         @peername = "#{@peername}:#{options[:port]}" if options[:port]
         @community = options[:community] || "public"
         options[:community_len] = @community.length
-        @version = options[:version] || 1
-        options[:version] ||= Constants::SNMP_VERSION_1
-        @version = options[:version] || 1
-        #self.class.sessions << self
+        options[:version] ||= Constants::SNMP_VERSION_2c
+        @version = options[:version]
         @sess = Wrapper::SnmpSession.new(nil)
         Wrapper.snmp_sess_init(@sess.pointer)
-        #options.each_pair {|k,v| ptr.send("#{k}=", v)}
         @sess.community = FFI::MemoryPointer.from_string(@community)
         @sess.community_len = @community.length
         @sess.peername = FFI::MemoryPointer.from_string(@peername)
-        #@sess.remote_port = options[:port] || 162
-        @sess.version = case options[:version].to_s
+        @sess.version = case @version.to_s
         when '1'
           Constants::SNMP_VERSION_1
         when '2', '2c'
@@ -454,7 +450,7 @@ module Net
 
       def send_pdu_blocking(pdu)
         response_ptr = FFI::MemoryPointer.new(:pointer)
-        if [Constants::SNMP_MSG_TRAP, Constants::SNMP_MSG_TRAP2].include?(pdu.command)
+        if [Constants::SNMP_MSG_TRAP, Constants::SNMP_MSG_TRAP2, Constants::SNMP_MSG_RESPONSE].include?(pdu.command)
           status = Wrapper.snmp_sess_send(@struct, pdu.pointer)
           if status == 0
             error("snmp_sess_send")
@@ -465,7 +461,7 @@ module Net
             error("snmp_sess_synch_response", :status => status)
           end
         end
-        if [Constants::SNMP_MSG_TRAP, Constants::SNMP_MSG_TRAP2].include?(pdu.command)
+        if [Constants::SNMP_MSG_TRAP, Constants::SNMP_MSG_TRAP2, Constants::SNMP_MSG_RESPONSE].include?(pdu.command)
           1
         else
           PDU.new(response_ptr.read_pointer)

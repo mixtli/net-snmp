@@ -7,7 +7,31 @@ class Message
     Message.new(packet)
   end
 
+  # Could have been an instance method, but a response pdu
+  # isn't really an intrinsic property of all messages. So,
+  # going with class method instead.
+  def self.response_pdu_for(message)
+    response_pdu = PDU.new(Constants::SNMP_MSG_RESPONSE)
+    response_pdu.reqid = message.pdu.reqid
+    response_pdu.version = message.version
+    response_pdu.community = message.pdu.community
+    response_pdu
+  end
+
   attr_accessor :version, :community, :pdu, :version_ptr, :community_ptr
+
+  def version_name
+    case @version
+    when Constants::SNMP_VERSION_1
+      '1'
+    when Constants::SNMP_VERSION_2c
+      '2c'
+    when Constants::SNMP_VERSION_3
+      '3'
+    else
+      raise "Invalid SNMP version: #{@version}"
+    end
+  end
 
   private
 
@@ -18,6 +42,7 @@ class Message
     :bytes_remaining
 
   def initialize(packet)
+    @version = nil
     @version_ptr = FFI::MemoryPointer.new(:long, 1)
     @community_ptr = FFI::MemoryPointer.new(:uchar, 100)
     @packet = packet
