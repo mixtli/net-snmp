@@ -1,19 +1,35 @@
 require 'forwardable'
 require 'nice-ffi'
 require 'fiber'
-require 'ffi-inliner'
-#require 'ffi/libc'
-%w( snmp snmp/debug snmp/wrapper snmp/version snmp/inline snmp/constants snmp/utility snmp/oid snmp/error snmp/pdu snmp/session snmp/trap_session snmp/varbind snmp/mib snmp/mib/node snmp/dispatcher).each do |f|
+require 'socket'
+require 'logger'
+%w(
+  snmp
+  snmp/debug
+  snmp/wrapper
+  snmp/version
+  snmp/constants
+  snmp/utility
+  snmp/oid
+  snmp/error
+  snmp/pdu
+  snmp/session
+  snmp/trap_session
+  snmp/varbind
+  snmp/mib
+  snmp/mib/node
+  snmp/mib/module
+  snmp/dispatcher
+  snmp/agent/agent
+  snmp/agent/provider
+  snmp/agent/request_context
+  snmp/agent/request_dispatcher
+  snmp/message
+).each do |f|
   require "#{File.dirname(__FILE__)}/net/#{f}"
 end
 
-
-
-Net::SNMP::MIB.init
-Net::SNMP::MIB.read_all_mibs
-Net::SNMP.init
-
-
+#Net::SNMP.init
 
 #  XXX
 #  I just monkeypatched this to take a nil first argument.  Seems to work
@@ -56,7 +72,6 @@ class NiceFFI::Struct < FFI::Struct
       super(val)
     else
       raise TypeError, "cannot create new #{self.class} from #{val.inspect}"
-
     end
   end
 end

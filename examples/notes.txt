@@ -1,0 +1,6 @@
+- Updated ruby net-snmp gem to search correct windows dll's for functions
+  + netsnmp.dll instead of libnetsnmp for snmp functions & Ws2_32.dll for `select`
+- Added missing NETSNMP_IMPORT declarations on functions missing in netsnmp.dll
+  + Exposes them to the world from the netsnmpdll
+  + Then rebuild netsnmp from netsnmp/win32/build.bat
+    * Make sure to select dynamic library build type when prompted for options

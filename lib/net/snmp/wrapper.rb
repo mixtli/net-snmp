@@ -2,8 +2,7 @@ module Net
 module SNMP
 module Wrapper
   extend NiceFFI::Library
-  ffi_lib "libnetsnmp"
-  #ffi_lib "netsnmp"
+  ffi_lib ["libnetsnmp", "netsnmp"]
   typedef :u_long, :oid
 
   class Counter64 < NiceFFI::Struct
@@ -19,7 +18,6 @@ module Wrapper
   def self.print_timeval(tv)
     puts "tv_sec = #{tv.tv_sec}, tv_usec = #{tv.tv_usec} "
   end
-
 
   class NetsnmpVardata < FFI::Union
     layout(
@@ -42,7 +40,7 @@ module Wrapper
 
     }
   end
- # puts "Vardata size = #{NetsnmpVardata.size}"
+
   class VariableList < NiceFFI::Struct
     layout(
            :next_variable, :pointer,
@@ -56,10 +54,8 @@ module Wrapper
            :data, :pointer,
            :dataFreeHook, callback([ :pointer ], :void),
            :index, :int
-    )  
+    )
   end
-  
-  #puts "VariableList size = #{VariableList.size}"
 
   def self.print_pdu(p)
     puts "--------------PDU---------------"
@@ -76,52 +72,52 @@ module Wrapper
       print_varbind(var)
       v = var.next_variable
     end
-    
   end
+
   class SnmpPdu < NiceFFI::Struct
     layout(
-           :version, :long,
-           :command, :int,
-           :reqid, :long,
-           :msgid, :long,
-           :transid, :long,
-           :sessid, :long,
-           :errstat, :long,
-           :errindex, :long,
-           :time, :u_long,
-           :flags, :u_long,
-           :securityModel, :int,
-           :securityLevel, :int,
-           :msgParseModel, :int,
-           :transport_data, :pointer,
-           :transport_data_length, :int,
-           :tDomain, :pointer,
-           :tDomainLen, :size_t,
-           :variables, VariableList.typed_pointer,
-           :community, :pointer,
-           :community_len, :size_t,
-           :enterprise, :pointer,
-           :enterprise_length, :size_t,
-           :trap_type, :long,
-           :specific_type, :long,
-           :agent_addr, [:uchar, 4],
-           :contextEngineID, :pointer,
-           :contextEngineIDLen, :size_t,
-           :contextName, :pointer,
-           :contextNameLen, :size_t,
-           :securityEngineID, :pointer,
-           :securityEngineIDLen, :size_t,
-           :securityName, :pointer,
-           :securityNameLen, :size_t,
-           :priority, :int,
-           :range_subid, :int,
-           :securityStateRef, :pointer
+       :version, :long,
+       :command, :int,
+       :reqid, :long,
+       :msgid, :long,
+       :transid, :long,
+       :sessid, :long,
+       :errstat, :long,
+       :errindex, :long,
+       :time, :u_long,
+       :flags, :u_long,
+       :securityModel, :int,
+       :securityLevel, :int,
+       :msgParseModel, :int,
+       :transport_data, :pointer,
+       :transport_data_length, :int,
+       :tDomain, :pointer,
+       :tDomainLen, :size_t,
+       :variables, VariableList.typed_pointer,
+       :community, :pointer,
+       :community_len, :size_t,
+       :enterprise, :pointer,
+       :enterprise_length, :size_t,
+       :trap_type, :long,
+       :specific_type, :long,
+       :agent_addr, [:uchar, 4],
+       :contextEngineID, :pointer,
+       :contextEngineIDLen, :size_t,
+       :contextName, :pointer,
+       :contextNameLen, :size_t,
+       :securityEngineID, :pointer,
+       :securityEngineIDLen, :size_t,
+       :securityName, :pointer,
+       :securityNameLen, :size_t,
+       :priority, :int,
+       :range_subid, :int,
+       :securityStateRef, :pointer
     )
-
   end
- # puts "snmppdu size = #{SnmpPdu.size}"
+
   callback(:snmp_callback, [ :int, :pointer, :int, :pointer, :pointer ], :int)
   callback(:netsnmp_callback, [ :int, :pointer, :int, :pointer, :pointer ], :int)
+
   def self.print_session(s)
     puts "-------------------SESSION---------------------"
     puts %{
@@ -133,6 +129,7 @@ module Wrapper
 
     }
   end
+
   class SnmpSession < NiceFFI::Struct
     layout(
            :version, :long,
@@ -185,24 +182,59 @@ module Wrapper
            :myvoid, :pointer
     )
   end
+
+  class EnumList < NiceFFI::Struct
+    layout(
+      :next, EnumList.typed_pointer,
+      :value, :int,
+      :label, :pointer
+    )
+  end
+
+  class IndexList < NiceFFI::Struct
+    layout(
+      :next, :pointer,
+      :ilabel, :pointer,
+      :isimplied, :char
+    )
+  end
+
+  class ModuleImport < NiceFFI::Struct
+    layout(
+      :label, :pointer, # The descriptor being imported (pointer to string)
+      :modid, :int # The module id
+    )
+  end
+
+  class Module < NiceFFI::Struct
+    layout(
+      :name, :pointer, # The module's name (pointer to string)
+      :file, :pointer, # The file containing the module (pointer to string)
+      :imports, ModuleImport.typed_pointer, # List of descriptors being imported
+      :no_imports, :int, # The length of the imports array
+      :modid, :int, # The index number of this module
+      :next, Module.typed_pointer # Linked list pointer
+    )
+  end
+
   class Tree < NiceFFI::Struct
     layout(
-      :child_list, :pointer,
-      :next_peer, :pointer,
-      :next, :pointer,
+      :child_list, Tree.typed_pointer,
+      :next_peer, Tree.typed_pointer,
+      :next, Tree.typed_pointer,
       :parent, :pointer,
       :label, :string,
       :subid, :u_long,
       :modid, :int,
-      :number_modules, :int,
-      :module_list, :pointer,
+      :number_modules, :int,  # Length of module_list array
+      :module_list, :pointer, # Array of modids (pointer to int)
       :tc_index, :int,
       :type, :int,
       :access, :int,
       :status, :int,
-      :enums, :pointer,
+      :enums, EnumList.typed_pointer,
       :ranges, :pointer,
-      :indexes, :pointer,
+      :indexes, IndexList.typed_pointer,
       :augments, :pointer,
       :varbinds, :pointer,
       :hint, :pointer,
@@ -215,16 +247,20 @@ module Wrapper
       :defaultValue, :pointer
     )
   end
-  class IndexList < NiceFFI::Struct
-    layout(
-        :next, :pointer,
-        :ilabel, :pointer,
-        :isimplied, :char
-    )
+
+  # Some of these functions/variables are not available on windows.
+  # (At least with my current setup.) Simple SNMP manager example
+  # seems to work fine without them, so just log and ignore for now.
+  class << self
+    include Net::SNMP::Debug
+    alias af attach_function
+    def attach_function(*args)
+      af(*args)
+    rescue Exception => ex
+      debug ex.message
+    end
   end
 
-
-#  puts "snmp_session size = #{SnmpSession.size}"
   attach_function :snmp_open, [ :pointer ], SnmpSession.typed_pointer
   attach_function :snmp_errstring, [:int], :string
   attach_function :snmp_close, [ :pointer ], :int
@@ -248,7 +284,7 @@ module Wrapper
   attach_function :snmp_oidsubtree_compare, [ :pointer, :uint, :pointer, :uint ], :int
   attach_function :netsnmp_oid_compare_ll, [ :pointer, :uint, :pointer, :uint, :pointer ], :int
   attach_function :netsnmp_oid_equals, [ :pointer, :uint, :pointer, :uint ], :int
-#  attach_function :netsnmp_oid_tree_equals, [ :pointer, :uint, :pointer, :uint ], :int
+  attach_function :netsnmp_oid_tree_equals, [ :pointer, :uint, :pointer, :uint ], :int
   attach_function :netsnmp_oid_is_subtree, [ :pointer, :uint, :pointer, :uint ], :int
   attach_function :netsnmp_oid_find_prefix, [ :pointer, :uint, :pointer, :uint ], :int
   attach_function :netsnmp_transport_open_client, [:string, :pointer], :pointer
@@ -256,7 +292,7 @@ module Wrapper
   attach_function :snmp_pdu_build, [ :pointer, :pointer, :pointer ], :pointer
   attach_function :snmpv3_parse, [ :pointer, :pointer, :pointer, :pointer, :pointer ], :int
   attach_function :snmpv3_packet_build, [ :pointer, :pointer, :pointer, :pointer, :pointer, :uint ], :int
-#  attach_function :snmpv3_packet_rbuild, [ :pointer, :pointer, :pointer, :pointer, :pointer, :uint ], :int
+  attach_function :snmpv3_packet_rbuild, [ :pointer, :pointer, :pointer, :pointer, :pointer, :uint ], :int
   attach_function :snmpv3_make_report, [ :pointer, :int ], :int
   attach_function :snmpv3_get_report_type, [ :pointer ], :int
   attach_function :snmp_pdu_parse, [ :pointer, :pointer, :pointer ], :int
@@ -272,7 +308,7 @@ module Wrapper
   attach_function :snmp_get_statistic, [ :int ], :u_int
   attach_function :snmp_init_statistics, [  ], :void
   attach_function :create_user_from_session, [ :pointer ], :int
- # attach_function :snmp_get_fd_for_session, [ :pointer ], :int
+  attach_function :snmp_get_fd_for_session, [ :pointer ], :int
   attach_function :snmp_open_ex, [ :pointer, callback([ :pointer, :pointer, :pointer, :int ], :int), callback([ :pointer, :pointer, :pointer, :uint ], :int), callback([ :pointer, :pointer, :int ], :int), callback([ :pointer, :pointer, :pointer, :pointer ], :int), callback([ :pointer, :pointer, :pointer, :pointer, :pointer ], :int), callback([ :pointer, :uint ], :int) ], :pointer
   attach_function :snmp_set_do_debugging, [ :int ], :void
   attach_function :snmp_get_do_debugging, [  ], :int
@@ -299,7 +335,7 @@ module Wrapper
   attach_function :snmp_pdu_type, [ :int ], :string
 
 
-  
+
   attach_function :asn_check_packet, [ :pointer, :uint ], :int
   attach_function :asn_parse_int, [ :pointer, :pointer, :pointer, :pointer, :uint ], :pointer
   attach_function :asn_build_int, [ :pointer, :pointer, :u_char, :pointer, :uint ], :pointer
@@ -338,12 +374,8 @@ module Wrapper
   attach_function :snmp_api_errstring, [ :int ], :string
   attach_function :snmp_perror, [ :string ], :void
   attach_function :snmp_set_detail, [ :string ], :void
-  
-  attach_function :snmp_select_info, [:pointer, :pointer, :pointer, :pointer], :int
-  attach_function :snmp_read, [:pointer], :void
+
   attach_function :generate_Ku, [:pointer, :int, :string, :int, :pointer, :pointer], :int
-
-
 
   # MIB functions
   attach_function :netsnmp_init_mib, [], :void
@@ -355,32 +387,27 @@ module Wrapper
 
   attach_function :get_tree_head, [], Tree.typed_pointer
   attach_function :get_tree, [:pointer, :int, :pointer], Tree.typed_pointer
-  #attach_function :send_easy_trap, [:int, :int], :void
-  #attach_function :send_trap_vars, [:int, :int, :pointer], :void
-  #attach_function :send_v2trap, [:pointer], :void
+
+  # struct module  *find_module(int modid);
+  attach_function :find_module, [:int], Module.typed_pointer
+
+  # Trap functions
+  attach_function :send_easy_trap, [:int, :int], :void
+  attach_function :send_trap_vars, [:int, :int, :pointer], :void
+  attach_function :send_v2trap, [:pointer], :void
 
   def self.get_fd_set
     FFI::MemoryPointer.new(:pointer, 128)
   end
-  
 
 end
 end
 end
-
-
-#module RubyWrapper
-#  extend FFI::Library
-#  ffi_lib FFI::CURRENT_PROCESS
-#  attach_function :rb_thread_select, [:int, :pointer, :pointer, :pointer, :pointer], :int
-#end
-
-
 
 module FFI
   module LibC
     extend FFI::Library
-    ffi_lib [FFI::CURRENT_PROCESS, 'c']
+    ffi_lib 'c'
 
     typedef :pointer, :FILE
     typedef :uint32, :in_addr_t
@@ -391,12 +418,33 @@ module FFI
              :tv_usec, :suseconds_t
     end
 
+    # Some of these functions/variables are not available on windows.
+    # (At least with my current setup.) Simple SNMP manager example
+    # seems to work fine without them, so just log and ignore for now.
+    class << self
+      include Net::SNMP::Debug
+      alias af attach_function
+      def attach_function(*args)
+        af(*args)
+      rescue Exception => ex
+        debug ex.message
+      end
+
+      alias av attach_variable
+      def attach_variable(*args)
+        av(*args)
+      rescue Exception => ex
+        debug ex.message
+      end
+    end
+
     # Standard IO functions
     #@blocking = true  # some undocumented voodoo that tells the next attach_function to release the GIL
-    attach_function :select, [:int, :pointer, :pointer, :pointer, :pointer], :int
-    attach_variable :errno, :int
     attach_function :malloc, [:size_t], :pointer
     attach_function :free, [:pointer], :void
+    #attach_variable :errno, :int
+
+    ffi_lib ['Ws2_32.dll'] if (ENV['OS'] =~ /windows/i)
+    attach_function :select, [:int, :pointer, :pointer, :pointer, :pointer], :int
   end
 end
-

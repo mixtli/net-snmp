@@ -46,7 +46,7 @@ module Net
       ASN_COUNTER64   = (ASN_APPLICATION | 6)
       ASN_UINTEGER    = (ASN_APPLICATION | 7)   # historic - don't use
 
-      # Exception values for SNMPv2 and SNMPv3
+      # Exception types for SNMPv2 and SNMPv3 (no value needed)
       SNMP_NOSUCHOBJECT   = (ASN_CONTEXT | ASN_PRIMITIVE | 0x0)
       SNMP_NOSUCHINSTANCE = (ASN_CONTEXT | ASN_PRIMITIVE | 0x1)
       SNMP_ENDOFMIBVIEW      = (ASN_CONTEXT | ASN_PRIMITIVE | 0x2)
@@ -54,15 +54,15 @@ module Net
 
       # PDU types
       SNMP_MSG_GET        = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x0)
-      SNMP_MSG_GETNEXT    = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x1) 
-      SNMP_MSG_RESPONSE   = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x2) 
+      SNMP_MSG_GETNEXT    = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x1)
+      SNMP_MSG_RESPONSE   = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x2)
       SNMP_MSG_SET        = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x3)
       SNMP_MSG_TRAP       = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x4)
       SNMP_MSG_GETBULK    = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x5)
       SNMP_MSG_INFORM     = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x6)
       SNMP_MSG_TRAP2      = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x7)
       SNMP_MSG_REPORT     = (ASN_CONTEXT | ASN_CONSTRUCTOR | 0x8)
-      
+
 
       # Callback status codes
       NETSNMP_CALLBACK_OP_RECEIVED_MESSAGE  =  1
@@ -70,7 +70,7 @@ module Net
       NETSNMP_CALLBACK_OP_SEND_FAILED       =  3
       NETSNMP_CALLBACK_OP_CONNECT           =  4
       NETSNMP_CALLBACK_OP_DISCONNECT        =  5
-      
+
 
       # Error codes (the value of the field error-status in PDUs)
 
@@ -192,7 +192,7 @@ module Net
       SNMP_DEFAULT_TIME = 0
       SNMP_DEFAULT_VERSION = -1
       SNMP_DEFAULT_SECMODEL = -1
-      SNMP_DEFAULT_CONTEXT = 
+      SNMP_DEFAULT_CONTEXT =
 
       SNMP_MAX_MSG_SIZE = 1472
       SNMP_MAX_MSG_V3_HDRS = (4+3+4+7+7+3+7+16)
@@ -279,7 +279,7 @@ module Net
       MIN_OID_LEN = 2
 
       MAX_NAME_LEN = 128
-      
+
     end
   end
 end

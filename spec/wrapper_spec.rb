@@ -4,7 +4,7 @@ describe "Net::SNMP::Wrapper" do
   def init_session
     community = "demopublic"
     peername = "test.net-snmp.org"
-    
+
     @session = Net::SNMP::Wrapper::SnmpSession.new(nil)
     Net::SNMP::Wrapper.snmp_sess_init(@session.pointer)
     @session.community = FFI::MemoryPointer.from_string(community)
@@ -21,7 +21,6 @@ describe "Net::SNMP::Wrapper" do
     @oid_ptr = FFI::MemoryPointer.new(:ulong, Net::SNMP::Constants::MAX_OID_LEN)
     @oid_len_ptr = FFI::MemoryPointer.new(:size_t)
     @oid_len_ptr.write_int(Net::SNMP::Constants::MAX_OID_LEN)
-    puts @pdu.inspect
 
     Net::SNMP::Wrapper.get_node("sysDescr.0", @oid_ptr, @oid_len_ptr)
     Net::SNMP::Wrapper.snmp_pdu_add_variable(@pdu.pointer, @oid_ptr, @oid_len_ptr.read_int, Net::SNMP::Constants::ASN_NULL, nil, 0)
@@ -58,12 +57,10 @@ describe "Net::SNMP::Wrapper" do
       sess = Net::SNMP::Wrapper.snmp_open(@session.pointer)
       Net::SNMP::Wrapper.snmp_send(sess.pointer, @pdu)
       sleep 1
-      fdset = FFI::MemoryPointer.new(:pointer, Net::SNMP::Inline.fd_setsize / 8)
+      fdset = FFI::MemoryPointer.new(1024 * 8)
       fds = FFI::MemoryPointer.new(:int)
-      #fds.autorelease = false
       tval = Net::SNMP::Wrapper::TimeVal.new
       block = FFI::MemoryPointer.new(:int)
-      #block.autorelease = false
       block.write_int(1)
       Net::SNMP::Wrapper.snmp_select_info(fds, fdset, tval.pointer, block )
       FFI::LibC.select(fds.read_int, fdset, nil, nil, nil)

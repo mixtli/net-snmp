@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 require 'optparse'
-#require 'ruby-debug19'
 $LOAD_PATH.unshift(File.dirname(__FILE__) + "/../lib")
 
 require 'net-snmp'
@@ -11,12 +10,13 @@ optparse = OptionParser.new do|opts|
   opts.on( '-v', '--version VERSION', 'SNMP version' ) do |version|
     options[:version] = version
   end
-  
+
   opts.on('-c', '--community COMMUNITY', 'Community') do |community|
     options[:community] = community
   end
 end
- optparse.parse!
+optparse.parse!
+
 host = ARGV[0]
 oid = ARGV[1]
 

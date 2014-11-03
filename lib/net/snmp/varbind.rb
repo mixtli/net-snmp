@@ -4,11 +4,11 @@ module Net
       # == Represents an SNMP Variable Binding
 
       attr_accessor :struct
-      
+
       def initialize(ptr = nil)
         @struct = Net::SNMP::Wrapper::VariableList.new(ptr)
       end
-      
+
       def self.from_pointer(ptr)
         new(ptr)
       end
@@ -17,14 +17,11 @@ module Net
       def object_type
         @struct.type
       end
-      
+      alias type object_type
+
       # Returns the OID associated with the varbind
       def oid
-        @oid ||= if Net::SNMP::Inline.oid_size == 8 
-                   Net::SNMP::OID.new(@struct.name.read_array_of_long(@struct.name_length).join("."))
-                 else
-                   Net::SNMP::OID.new(@struct.name.read_array_of_int(@struct.name_length).join("."))
-                 end
+        @oid ||= OID.from_pointer(@struct.name, @struct.name_length)
       end
 
       # Returns the value of the varbind
@@ -40,12 +37,8 @@ module Net
           struct.val[:objid].read_string(struct.val_len).unpack('CCCC').join(".")
         when Constants::ASN_NULL
           nil
-          when Constants::ASN_OBJECT_ID
-            if Net::SNMP::Inline.oid_size == 8
-              Net::SNMP::OID.new(struct.val[:objid].read_array_of_long(struct.val_len / Net::SNMP::Inline.oid_size).join("."))
-            else
-              Net::SNMP::OID.new(struct.val[:objid].read_array_of_int(struct.val_len / Net::SNMP::Inline.oid_size).join("."))
-            end
+        when Constants::ASN_OBJECT_ID
+          Net::SNMP::OID.from_pointer(struct.val[:objid], struct.val_len / OID.oid_size)
         when Constants::ASN_COUNTER64
           counter = Wrapper::Counter64.new(struct.val[:counter64])
           counter.high * 2^32 + counter.low

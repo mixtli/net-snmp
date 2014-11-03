@@ -9,7 +9,7 @@ Net::SNMP::Session.open do |sess|
     200.times {
       pdu = sess.get('ifIndex.1')
       puts pdu.varbinds.first.value
-     pdu.free
+      pdu.free
     }
     sleep 1
   end

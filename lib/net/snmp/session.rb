@@ -37,7 +37,7 @@ module Net
         # * +context+ - SNMPv3 only.
         # * +username+ - SNMPv3 only.
         # * +auth_password+ - SNMPv3 only.
-        # * +priv_password+ - SNMPv3 only.  
+        # * +priv_password+ - SNMPv3 only.
         # Returns:
         # Net::SNMP::Session
         def open(options = {})
@@ -64,18 +64,14 @@ module Net
         @peername = "#{@peername}:#{options[:port]}" if options[:port]
         @community = options[:community] || "public"
         options[:community_len] = @community.length
-        @version = options[:version] || 1
-        options[:version] ||= Constants::SNMP_VERSION_1
-        @version = options[:version] || 1
-        #self.class.sessions << self
+        options[:version] ||= Constants::SNMP_VERSION_2c
+        @version = options[:version]
         @sess = Wrapper::SnmpSession.new(nil)
         Wrapper.snmp_sess_init(@sess.pointer)
-        #options.each_pair {|k,v| ptr.send("#{k}=", v)}
         @sess.community = FFI::MemoryPointer.from_string(@community)
         @sess.community_len = @community.length
         @sess.peername = FFI::MemoryPointer.from_string(@peername)
-        #@sess.remote_port = options[:port] || 162
-        @sess.version = case options[:version].to_s
+        @sess.version = case @version.to_s
         when '1'
           Constants::SNMP_VERSION_1
         when '2', '2c'
@@ -107,7 +103,7 @@ module Net
               when nil
                 OID.new("1.3.6.1.6.3.10.1.2.1").pointer
           end
-          
+
           @sess.securityAuthProtoLen = 10
           @sess.securityAuthKeyLen = Constants::USM_AUTH_KU_LEN
 
@@ -247,7 +243,7 @@ module Net
         err.print
         raise err, msg
       end
-      
+
 
       # Check the session for SNMP responses from asynchronous SNMP requests
       # This method will check for new responses and call the associated
@@ -257,7 +253,15 @@ module Net
       # the number of seconds to block.
       # Returns the number of file descriptors handled.
       def select(timeout = nil)
-          fdset = FFI::MemoryPointer.new(:pointer, Net::SNMP::Inline.fd_setsize / 8)
+          if @fdset
+            # Re-use the same fd set buffer to avoid
+            # multiple allocation overhead.
+            @fdset.clear
+          else
+            # 8K should be plenty of space
+            @fdset = FFI::MemoryPointer.new(1024 * 8)
+          end
+
           num_fds = FFI::MemoryPointer.new(:int)
           tv_sec = timeout ? timeout.round : 0
           tv_usec = timeout ? (timeout - timeout.round) * 1000000 : 0
@@ -269,13 +273,13 @@ module Net
             block.write_int(1)
           end
 
-          Wrapper.snmp_sess_select_info(@struct, num_fds, fdset, tval.pointer, block )
+          Wrapper.snmp_sess_select_info(@struct, num_fds, @fdset, tval.pointer, block )
           tv = (timeout == false ? nil : tval)
           #debug "Calling select #{Time.now}"
-          num_ready = FFI::LibC.select(num_fds.read_int, fdset, nil, nil, tv)
+          num_ready = FFI::LibC.select(num_fds.read_int, @fdset, nil, nil, tv)
           #debug "Done select #{Time.now}"
           if num_ready > 0
-            Wrapper.snmp_sess_read(@struct, fdset)
+            Wrapper.snmp_sess_read(@struct, @fdset)
           elsif num_ready == 0
             Wrapper.snmp_sess_timeout(@struct)
           elsif num_ready == -1
@@ -446,7 +450,7 @@ module Net
 
       def send_pdu_blocking(pdu)
         response_ptr = FFI::MemoryPointer.new(:pointer)
-        if [Constants::SNMP_MSG_TRAP, Constants::SNMP_MSG_TRAP2].include?(pdu.command)
+        if [Constants::SNMP_MSG_TRAP, Constants::SNMP_MSG_TRAP2, Constants::SNMP_MSG_RESPONSE].include?(pdu.command)
           status = Wrapper.snmp_sess_send(@struct, pdu.pointer)
           if status == 0
             error("snmp_sess_send")
@@ -457,7 +461,7 @@ module Net
             error("snmp_sess_synch_response", :status => status)
           end
         end
-        if [Constants::SNMP_MSG_TRAP, Constants::SNMP_MSG_TRAP2].include?(pdu.command)
+        if [Constants::SNMP_MSG_TRAP, Constants::SNMP_MSG_TRAP2, Constants::SNMP_MSG_RESPONSE].include?(pdu.command)
           1
         else
           PDU.new(response_ptr.read_pointer)
@@ -484,7 +488,9 @@ module Net
       def print_errors
         puts "errno: #{errno}, snmp_err: #{@snmp_err}, message: #{@snmp_msg}"
       end
+
       private
+
       def sess_callback
         @sess_callback ||= FFI::Function.new(:int, [:int, :pointer, :int, :pointer, :pointer]) do |operation, session, reqid, pdu_ptr, magic|
           debug "in callback #{operation.inspect} #{session.inspect}"
@@ -513,6 +519,7 @@ module Net
           end
         end
       end
+
       def get_error
           errno_ptr = FFI::MemoryPointer.new(:int)
           snmp_err_ptr = FFI::MemoryPointer.new(:int)
@@ -523,9 +530,6 @@ module Net
           @snmp_msg = msg_ptr.read_pointer.read_string
       end
 
-
     end
   end
 end
-
-
