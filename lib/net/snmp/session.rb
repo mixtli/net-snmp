@@ -136,7 +136,7 @@ module Net
             auth_key_result = Wrapper.generate_Ku(@sess.securityAuthProto,
                                              @sess.securityAuthProtoLen,
                                              options[:auth_password],
-                                             options[:auth_password].length,
+                                             options[:auth_password].bytesize,
                                              @sess.securityAuthKey,
                                              auth_len_ptr)
             @sess.securityAuthKeyLen = auth_len_ptr.read_int
@@ -150,7 +150,7 @@ module Net
               priv_key_result = Wrapper.generate_Ku(@sess.securityAuthProto,
                                                @sess.securityAuthProtoLen,
                                                options[:priv_password],
-                                               options[:priv_password].length,
+                                               options[:priv_password].bytesize,
                                                @sess.securityPrivKey,
                                                priv_len_ptr)
               @sess.securityPrivKeyLen = priv_len_ptr.read_int
