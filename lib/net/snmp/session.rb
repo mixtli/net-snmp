@@ -176,7 +176,7 @@ module Net
             self.class.sessions.delete(self.sessid)
           }
         else
-          Wrapper..shutdown_usm()
+          Wrapper.shutdown_usm()
           Wrapper.snmp_sess_close(@struct)
           self.class.sessions.delete(self.sessid)
         end
