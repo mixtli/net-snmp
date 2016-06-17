@@ -171,10 +171,12 @@ module Net
       def close
         if Net::SNMP.thread_safe
           self.class.lock.synchronize {
-            Wrapper.snmp_sess_close(@struct)
+            Wrapper..shutdown_usm()
+	    Wrapper.snmp_sess_close(@struct)
             self.class.sessions.delete(self.sessid)
           }
         else
+          Wrapper..shutdown_usm()
           Wrapper.snmp_sess_close(@struct)
           self.class.sessions.delete(self.sessid)
         end

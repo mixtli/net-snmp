@@ -358,6 +358,8 @@ module Wrapper
   #attach_function :send_easy_trap, [:int, :int], :void
   #attach_function :send_trap_vars, [:int, :int, :pointer], :void
   #attach_function :send_v2trap, [:pointer], :void
+  
+  attach_function :shutdown_usm, [], :void
 
   def self.get_fd_set
     FFI::MemoryPointer.new(:pointer, 128)
